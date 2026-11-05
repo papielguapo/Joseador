@@ -1,17 +1,17 @@
 # Guía de Joseador
 
-**Por PAPIELGUAPO · Windows 11 x64 · VST3 · Versión 0.3.0**
+**Por PAPIELGUAPO · Windows 11 x64 · VST3 · Versión 0.3.1**
 
 Joseador abre páginas web en una ventana móvil y entrega su audio al DAW. En FL Studio se carga como instrumento en el Channel Rack.
 
 <img src="images/joseador.jpg" alt="Pantalla de inicio real de Joseador, con once accesos y buscador inferior" width="400">
 
-*Captura real de la aplicación de escritorio, que comparte la interfaz del editor VST3. El marco recuerda a un iPhone; el navegador funciona en Windows.*
+*Captura real de 0.3.1, con Actualizar página a la derecha del buscador. La aplicación de escritorio comparte el editor del VST3.*
 
 ## 1. Descargar e instalar
 
 1. Abre [la página de descargas](https://github.com/papielguapo/Joseador/releases/latest).
-2. En **Assets**, descarga **Joseador-Windows11-VST3.zip** y extrae todo su contenido.
+2. En **Assets**, descarga el ZIP de Windows 11 VST3 (no el archivo Source code) y extrae todo su contenido.
 3. Cierra FL Studio y ejecuta **install.ps1** con PowerShell.
 4. El instalador copia el paquete completo a:
 
@@ -37,7 +37,7 @@ Puedes marcarlo como favorito para encontrarlo después en el selector. Estos pa
 
 Pulsa cualquiera de los once iconos: YouTube, TikTok, Instagram, Facebook, X, Reddit, Twitch, SoundCloud, Spotify, WhatsApp o Gmail. Los accesos de WhatsApp y Gmail abren sus webs dentro del navegador.
 
-También puedes escribir una dirección o una búsqueda en la barra inferior y pulsar **Enter**. El botón izquierdo retrocede por el historial hasta llegar a Inicio; allí permanece. El botón **X** de la derecha borra el texto del buscador.
+También puedes escribir una dirección o una búsqueda en la barra inferior y pulsar **Enter**. El botón izquierdo retrocede por el historial hasta llegar a Inicio; allí permanece. El botón circular **Actualizar página**, a la derecha, recarga la web abierta. Para sustituir texto, selecciónalo en el buscador y escribe la nueva dirección.
 
 Arrastra la esquina de la ventana para cambiar su tamaño. La vista móvil y la pantalla de Inicio se adaptan al espacio disponible.
 
@@ -86,3 +86,5 @@ Las instancias simultáneas usan perfiles separados. Si cambia su orden de apert
 El audio se entrega en estéreo de 32 bits float, con calidad limitada por la fuente original. La reproducción es en directo, puede tener latencia y no está sincronizada con el transporte del DAW. Usa grabación en tiempo real. Consulta [las comprobaciones realizadas](../VALIDACION.md) para conocer el alcance de compatibilidad.
 
 [Volver a la portada](../README.md) · [Descargar Joseador](https://github.com/papielguapo/Joseador/releases/latest)
+
+[Auditoría interna de 0.3.1](AUDITORIA.md): correcciones, pruebas y límites de esta revisión.

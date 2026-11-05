@@ -1,12 +1,12 @@
-# Joseador 0.3.0
+# Joseador 0.3.1
 
 **Creador: PAPIELGUAPO.** Instrumento VST3 para Windows 11 x64 con navegador móvil reescalable y audio exclusivo al DAW. Anteriormente llamado WebCapture Mobile.
 
-[**Descargar VST3**](https://github.com/papielguapo/Joseador/releases/latest) · [**Guía de instalación y uso**](docs/GUIA.md)
+[**Descargar VST3**](https://github.com/papielguapo/Joseador/releases/latest) · [**Guía de instalación y uso**](docs/GUIA.md) · [**Auditoría 0.3.1**](docs/AUDITORIA.md)
 
 <img src="docs/images/joseador.jpg" alt="Interfaz real de Joseador con pantalla móvil, once accesos web y buscador inferior" width="400">
 
-*Pantalla de Inicio real, capturada en la aplicación de escritorio que comparte el editor del VST3.*
+*Interfaz real de 0.3.1: Inicio y botón Actualizar página, capturados en la aplicación de escritorio que comparte el editor VST3.*
 
 ## Instalar en FL Studio
 
@@ -20,7 +20,7 @@ El instalador conserva la versión anterior fuera del escaneo. Se mantienen los 
 
 La salida al DAW está siempre activa. Las notas MIDI no disparan ni afinan la web. No necesita una nota sostenida. No hay grabador WAV, reinicio ni selector de escritorio. Al cerrar el editor sigue reproduciendo mientras el instrumento permanezca cargado y el host procese el canal. El transporte del DAW no controla la web y no hay renderizado acelerado sin conexión.
 
-Inicio tiene cuatro columnas y once accesos: YouTube, TikTok, Instagram, Facebook, X, Reddit, Twitch, SoundCloud, Spotify, WhatsApp Web y Gmail web. Abren sus páginas dentro del plugin. La barra inferior acepta direcciones o búsquedas con Enter; el botón izquierdo retrocede por el historial hasta Inicio y X borra el campo. Se ha retirado el micrófono.
+Inicio tiene cuatro columnas y once accesos: YouTube, TikTok, Instagram, Facebook, X, Reddit, Twitch, SoundCloud, Spotify, WhatsApp Web y Gmail web. Abren sus páginas dentro del plugin. La barra inferior acepta direcciones o búsquedas con Enter; el botón izquierdo retrocede por el historial hasta Inicio y el botón circular de la derecha actualiza la página. Se ha retirado el micrófono.
 
 La rueda genera gestos táctiles en todas las webs, incluidas TikTok, Reels, Shorts, SoundCloud y Spotify. Con la página enfocada, ↑/↓ envían gestos verticales y ←/→ horizontales. En historias de Instagram/Facebook, bajar avanza y subir retrocede. Campos editables y comentarios desplazables conservan su manejo habitual. El resultado depende de cada web.
 
@@ -49,3 +49,5 @@ Resultado: build/WebCaptureMobile_artefacts/Release/VST3/Joseador.vst3. Nombres 
 ## Licencias
 
 Código propio MIT. JUCE mantiene licencia AGPLv3/comercial; CEF y demás componentes mantienen sus licencias. Consulta ThirdParty, incluidos los avisos de códecs, antes de redistribuir. VALIDACION.md describe las pruebas. Git contiene código y documentos; los binarios están en Releases o se generan al compilar.
+
+La versión 0.3.1 refuerza el origen de las credenciales, la validación de gestos y las URLs del estado. Consulta [la auditoría interna y sus límites](docs/AUDITORIA.md).

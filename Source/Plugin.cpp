@@ -1,5 +1,6 @@
 #include "Browser.h"
 #include "SystemStatus.h"
+#include "NavigationPolicy.h"
 class Processor;
 class HomeButton final:public juce::Button {
 public:
@@ -12,6 +13,16 @@ public:
         const float cx=left+15,cy=h*.5f;g.drawLine(cx-3,cy-3,cx+3,cy+3,1.6f);g.drawLine(cx+3,cy-3,cx-3,cy+3,1.6f);
     }
 };
+class ReloadButton final:public juce::Button {
+public:
+    ReloadButton():Button("Actualizar pagina"){setTooltip("Actualizar pagina");}
+    void paintButton(juce::Graphics& g,bool over,bool down)override{
+        if(over||down){g.setColour(juce::Colour(down?0xffd4d7dd:0xffedf0f4));g.fillEllipse(getLocalBounds().toFloat());}
+        const auto area=getLocalBounds().toFloat();const float cx=area.getCentreX(),cy=area.getCentreY(),r=7;
+        g.setColour(juce::Colour(0xff747982));juce::Path arc;arc.addCentredArc(cx,cy,r,r,0,.55f,5.65f,true);g.strokePath(arc,juce::PathStrokeType(1.8f,juce::PathStrokeType::curved,juce::PathStrokeType::rounded));
+        juce::Path head;head.startNewSubPath(cx-7,cy-7);head.lineTo(cx-2,cy-6);head.lineTo(cx-6,cy-2);head.closeSubPath();g.fillPath(head);
+    }
+};
 class Editor final:public juce::AudioProcessorEditor,private juce::Timer {
 public:
     explicit Editor(Processor&);
@@ -20,7 +31,7 @@ public:
 private:
     Processor& proc;BrowserView browser;juce::TextEditor url;
     HomeButton home;
-    juce::TextButton clear{juce::String::fromUTF8("\xc3\x97")};
+    ReloadButton reload;
     SystemStatus pc;
     juce::TooltipWindow tips{this,500};
     void timerCallback()override;
@@ -45,17 +56,16 @@ public:
     juce::AudioProcessorEditor* createEditor()override{ensureBrowser();return new Editor(*this);}
     int getNumPrograms()override{return 1;}int getCurrentProgram()override{return 0;}void setCurrentProgram(int)override{}
     const juce::String getProgramName(int)override{return{};}void changeProgramName(int,const juce::String&)override{}
-    void getStateInformation(juce::MemoryBlock& block)override{juce::XmlElement x("WebCaptureMobile");x.setAttribute("url",lastUrl);copyXmlToBinary(x,block);}
-    void setStateInformation(const void* bytes,int n)override{if(auto x=getXmlFromBinary(bytes,n))if(x->hasTagName("WebCaptureMobile"))lastUrl=x->getStringAttribute("url",lastUrl);}
+    void getStateInformation(juce::MemoryBlock& block)override{juce::XmlElement x("WebCaptureMobile");const auto current=session.address();const auto address=current.isNotEmpty()?current:lastUrl;x.setAttribute("url",juce::String(navigation::projectAddress(std::wstring(address.toWideCharPointer())).c_str()));copyXmlToBinary(x,block);}
+    void setStateInformation(const void* bytes,int n)override{if(auto x=getXmlFromBinary(bytes,n))if(x->hasTagName("WebCaptureMobile")){const auto saved=x->getStringAttribute("url",lastUrl);lastUrl=juce::String(navigation::projectAddress(std::wstring(saved.toWideCharPointer())).c_str());}}
 };
 Editor::Editor(Processor& p):AudioProcessorEditor(p),proc(p),browser(p.session){
     setResizable(true,true);setResizeLimits(320,400,1200,1400);setSize(400,680);
-    for(auto* c:std::initializer_list<juce::Component*>{&browser,&url,&home,&clear})addAndMakeVisible(c);
+    for(auto* c:std::initializer_list<juce::Component*>{&browser,&url,&home,&reload})addAndMakeVisible(c);
     home.setTitle("Atras / Inicio");
-    clear.setTitle("Borrar busqueda");clear.setTooltip("Borrar");clear.onClick=[this]{url.clear();url.grabKeyboardFocus();};
-    clear.setColour(juce::TextButton::buttonColourId,juce::Colour(0xff96979b));
-    clear.setColour(juce::TextButton::textColourOffId,juce::Colours::white);
+    reload.onClick=[this]{proc.session.command(6);};
     url.setText(proc.lastUrl=="webcapture://home"?juce::String():proc.lastUrl);url.setSelectAllWhenFocused(true);
+    url.setInputRestrictions(2047);
     home.onClick=[this]{proc.session.command(2);};
     url.setTextToShowWhenEmpty("Buscar o escribir direccion",juce::Colours::grey);
     url.setFont(juce::Font(16));
@@ -77,8 +87,8 @@ Editor::Editor(Processor& p):AudioProcessorEditor(p),proc(p),browser(p.session){
 void Editor::resized(){
     browser.setBounds(4,47,getWidth()-8,getHeight()-116);
     home.setBounds(14,getHeight()-57,30,36);
-    url.setBounds(56,getHeight()-55,getWidth()-100,32);
-    clear.setBounds(getWidth()-36,getHeight()-49,20,20);
+    url.setBounds(56,getHeight()-55,getWidth()-105,32);
+    reload.setBounds(getWidth()-42,getHeight()-53,28,28);
 }
 void Editor::paint(juce::Graphics& g){
     g.fillAll(juce::Colour(0xff10151e));g.setColour(juce::Colour(0xff515866));g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(1),24,2);
@@ -101,4 +111,3 @@ void Editor::paint(juce::Graphics& g){
 }
 void Editor::timerCallback(){const auto current=proc.session.address();if(current.isNotEmpty()&&current!="about:blank"){proc.lastUrl=current;if(!url.hasKeyboardFocus(true))url.setText(current=="webcapture://home"?juce::String():current,false);}auto text=proc.session.status();text+="\n";text+=pc.network==2?"Wi-Fi conectado":(pc.network==1?"Ethernet conectado":(pc.network==0?"Sin conexion de red":"Red no disponible"));text+=" | ";text+=pc.battery==-2?"PC sin bateria":(pc.battery>=0?"Bateria: "+juce::String(pc.battery.load())+"%":"Bateria no disponible");url.setTooltip(text);repaint();}
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter(){return new Processor();}
-

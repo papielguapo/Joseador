@@ -6,6 +6,8 @@
 #include "include/capi/cef_jsdialog_handler_capi.h"
 #include "include/capi/cef_parser_capi.h"
 #include "PasswordStore.h"
+#include "NavigationPolicy.h"
+#include "InputGate.h"
 #include "include/cef_sandbox_win.h"
 #include "include/cef_api_hash.h"
 #include <shellapi.h>
@@ -45,9 +47,10 @@ bool closing=false,selfTest=false,homeTest=false;
 bool returningBack=false;
 std::wstring currentAddress;
 bool historyTest=false,historyOk=true;int historyStep=-1;ULONGLONG historyStarted=0;
+bool reloadTest=false,reloadIssued=false;int reloadLoads=0;ULONGLONG reloadStarted=0;
 std::wstring profileTest;
 int width=370,height=493,channelCount=2,protocolId=0,lastGestureId=0;
-int wheelMode=0;HHOOK mouseHook=nullptr;
+int wheelMode=0;HHOOK mouseHook=nullptr,keyboardHook=nullptr;InputGate inputGate;
 struct SwipeState{bool active=false,tap=false;int direction=1;ULONGLONG started=0;double x=0,y=0,distance=0;bool horizontal=false;} swipe;
 void protocol(const std::string& method,const std::string& params){
     if(!active)return;auto*host=active->get_host(active);
@@ -89,14 +92,21 @@ void updateSwipe(){if(!swipe.active)return;const double t=(GetTickCount64()-swip
     if(t>=1){touch("touchEnd",0,0);swipe.active=false;}
 }
 LRESULT CALLBACK mouseProc(int code,WPARAM message,LPARAM param){
-    if(code>=0&&message==WM_MOUSEWHEEL&&active&&wheelMode&&!(GetKeyState(VK_CONTROL)&0x8000)&&!(GetKeyState(VK_SHIFT)&0x8000)){
+    if(code==HC_ACTION&&message==WM_MOUSEWHEEL&&active&&!(GetKeyState(VK_CONTROL)&0x8000)&&!(GetKeyState(VK_SHIFT)&0x8000)){
         auto*info=(MOUSEHOOKSTRUCTEX*)param;RECT bounds{};GetClientRect(root,&bounds);POINT point=info->pt;ScreenToClient(root,&point);
-        if(PtInRect(&bounds,point)){static int amount=0;const int delta=(short)HIWORD(info->mouseData);if((amount>0)!=(delta>0))amount=0;amount+=delta;
-            if(std::abs(amount)>=35){wheelGesture(wheelMode==2,amount<0?1:-1,false,wheelMode==3);amount=0;}return 1;}
+        if(PtInRect(&bounds,point)){static int amount=0;const int delta=(short)HIWORD(info->mouseData);if(delta)inputGate.record(0,delta<0?1:-1,GetTickCount64());if(!wheelMode)return CallNextHookEx(mouseHook,code,message,param);
+            if((amount>0)!=(delta>0))amount=0;amount+=delta;
+            if(std::abs(amount)>=35){wheelGesture(wheelMode==2,amount<0?1:-1,false,wheelMode==3);amount=0;inputGate.consume();}return 1;}
     }
     return CallNextHookEx(mouseHook,code,message,param);
 }
-void navigate(const std::wstring& address){if(active){auto target=address;
+LRESULT CALLBACK keyboardProc(int code,WPARAM key,LPARAM details){
+    if(code==HC_ACTION&&!(static_cast<ULONG_PTR>(details)&(1ull<<31))&&active){const auto focus=GetFocus();if(focus&&(focus==root||IsChild(root,focus))){
+        if(key==VK_UP||key==VK_DOWN)inputGate.record(1,key==VK_DOWN?1:-1,GetTickCount64());
+        else if(key==VK_LEFT||key==VK_RIGHT)inputGate.record(2,key==VK_RIGHT?1:-1,GetTickCount64());
+    }}return CallNextHookEx(keyboardHook,code,key,details);
+}
+void navigate(const std::wstring& address){if(active&&navigation::allowed(address)){auto target=address;
     if(target==L"webcapture://home"){wchar_t path[32768];GetModuleFileNameW(nullptr,path,32768);target=std::wstring(path);target=target.substr(0,target.find_last_of(L"\\/"))+L"\\start.html";for(auto&c:target)if(c==L'\\')c=L'/';target=L"file:///"+target;}
     auto*f=active->get_main_frame(active);String s(target);f->load_url(f,&s.value);release(f);}}
 bool isHome(const std::wstring& address){return address==L"webcapture://home"||(address.rfind(L"file:///",0)==0&&address.size()>=11&&address.substr(address.size()-11)==L"/start.html");}
@@ -111,6 +121,7 @@ LRESULT CALLBACK windowProc(HWND hwnd,UINT message,WPARAM wp,LPARAM lp){
     if(message==WM_SIZE){width=LOWORD(lp);height=HIWORD(lp);if(active){auto*h=active->get_host(active);SetWindowPos(h->get_window_handle(h),nullptr,0,0,width,height,SWP_NOZORDER|SWP_NOACTIVATE);release(h);mobileMetrics();}return 0;}
     if(message==WM_TIMER){shared->heartbeat=GetTickCount64();
         updateSwipe();
+        if(reloadTest&&reloadLoads==1&&!reloadIssued&&GetTickCount64()-reloadStarted>500&&WaitForSingleObject(navigationMutex,0)==WAIT_OBJECT_0){shared->command=6;reloadIssued=true;ReleaseMutex(navigationMutex);}
         if(historyTest&&historyStep>=0&&historyStep<4&&GetTickCount64()-historyStarted>(ULONGLONG)(400*(historyStep+1))){
             const std::wstring current=shared->url;
             if(WaitForSingleObject(navigationMutex,100)==WAIT_OBJECT_0){const auto hash=current.find(L'#');const auto label=isHome(current)?L"home":hash==std::wstring::npos?L"other":current.substr(hash);const auto marker=L" | H"+std::to_wstring(historyStep)+L":"+label;if(wcslen(shared->error)+marker.size()+1<std::size(shared->error))wcscat_s(shared->error,marker.c_str());ReleaseMutex(navigationMutex);}
@@ -125,7 +136,8 @@ LRESULT CALLBACK windowProc(HWND hwnd,UINT message,WPARAM wp,LPARAM lp){
         if(shared->quit&&!closing){closing=true;closeBrowser();}
         if(active&&!closing&&WaitForSingleObject(navigationMutex,0)==WAIT_OBJECT_0){auto action=shared->command;std::wstring address=shared->url;shared->command=0;ReleaseMutex(navigationMutex);
             if(action==1){returningBack=false;navigate(address);}else if(action==2)backOrHome();else if(action==3)active->go_forward(active);
-            else if(action==4||action==5){auto*host=active->get_host(active);cef_mouse_event_t event{};event.x=width/2;event.y=height/2;host->send_mouse_wheel_event(host,&event,0,action==4?-120:120);release(host);}}
+            else if(action==6){returningBack=false;active->reload(active);}
+            else if(action==4||action==5){if(wheelMode)wheelGesture(wheelMode==2,action==4?1:-1,false,wheelMode==3);else{auto*host=active->get_host(active);cef_mouse_event_t event{};event.x=width/2;event.y=height/2;host->send_mouse_wheel_event(host,&event,0,action==4?-120:120);release(host);}}}
         return 0;}
     if(message==WM_CLOSE){if(closing)DestroyWindow(hwnd);else{closing=true;closeBrowser();}return 0;}
     return DefWindowProc(hwnd,message,wp,lp);
@@ -138,8 +150,9 @@ int run(HINSTANCE instance,void* sandbox){
     HANDLE mapping=OpenFileMappingW(FILE_MAP_ALL_ACCESS,FALSE,name.c_str());if(!mapping)return 31;
     shared=(webcapture::Bridge*)MapViewOfFile(mapping,FILE_MAP_ALL_ACCESS,0,0,sizeof(webcapture::Bridge));if(!shared)return 32;
     navigationMutex=OpenMutexW(SYNCHRONIZE|MUTEX_MODIFY_STATE,FALSE,(name+L"-ui").c_str());if(!navigationMutex)return 33;
+    reloadTest=std::wstring(GetCommandLineW()).find(L"--reload-test")!=std::wstring::npos;if(reloadTest)homeTest=true;
     if(!sandbox){shared->fault=1;return 34;}
-    cef_settings_t settings{};settings.size=sizeof(settings);settings.log_severity=LOGSEVERITY_ERROR;
+    cef_settings_t settings{};settings.size=sizeof(settings);settings.log_severity=LOGSEVERITY_DISABLE;
     wchar_t local[MAX_PATH];GetEnvironmentVariableW(L"LOCALAPPDATA",local,MAX_PATH);
     auto cache=std::wstring(local)+L"\\WebCaptureMobile\\"+name.substr(name.find_last_of(L'\\')+1);
     if(selfTest&&!profileTest.empty())cache=std::wstring(local)+L"\\WebCaptureMobile\\Tests\\Persistence";
@@ -167,6 +180,7 @@ int run(HINSTANCE instance,void* sandbox){
     load->api.on_load_end=[](cef_load_handler_t*,cef_browser_t*,cef_frame_t*frame,int){if(frame->is_main(frame)){mobileMetrics();fitDocument(frame);if(selfTest){
         String js(L"window.a=new AudioContext();window.o=a.createOscillator();window.g=a.createGain();g.gain.value=0.18;o.frequency.value=440;o.connect(g);g.connect(a.destination);o.start();a.resume();console.log('WEBCAPTURE_CODECS:'+document.createElement('video').canPlayType('video/mp4; codecs=\"avc1.42E01E, mp4a.40.2\"')+' | APPS:'+document.querySelectorAll('main a').length+' | WIDTH:'+innerWidth);"),origin(L"https://webcapture.test");
         frame->execute_java_script(frame,&js.value,&origin.value,0);
+        if(reloadTest&&isHome(currentAddress)){++reloadLoads;if(reloadLoads==1)reloadStarted=GetTickCount64();else if(reloadLoads==2){String result(L"console.debug('WEBCAPTURE_RELOAD:yes');");frame->execute_java_script(frame,&result.value,&origin.value,0);}}
         if(historyTest&&historyStep<0){auto*u=frame->get_url(frame);std::wstring page;if(u){page.assign((wchar_t*)u->str,u->length);cef_string_userfree_utf16_free(u);}if(isHome(page)){
             historyStep=0;historyStarted=GetTickCount64();protocol("Runtime.evaluate","{\"expression\":\"history.pushState({},'' , '#one');history.pushState({},'' , '#two');\",\"userGesture\":true}");
         }}
@@ -188,21 +202,24 @@ int run(HINSTANCE instance,void* sandbox){
     display->api.on_console_message=[](cef_display_handler_t*,cef_browser_t*,cef_log_severity_t,const cef_string_t*msg,const cef_string_t*,int)->int{
         std::wstring command((wchar_t*)msg->str,msg->length);
         if(command==L"__WC_MODE__:reels"||command==L"__WC_MODE__:stories"||command==L"__WC_MODE__:scroll"||command==L"__WC_MODE__:normal"){wheelMode=command==L"__WC_MODE__:reels"?1:(command==L"__WC_MODE__:stories"?2:(command==L"__WC_MODE__:scroll"?3:0));return 1;}
-        if(selfTest&&(command.rfind(L"WEBCAPTURE_FIT:",0)==0||command.rfind(L"WEBCAPTURE_TOUCH:",0)==0||command.rfind(L"WEBCAPTURE_PERSIST:",0)==0)&&WaitForSingleObject(navigationMutex,100)==WAIT_OBJECT_0){if(wcslen(shared->error)+command.size()+4<std::size(shared->error))wcscat_s(shared->error,(L" | "+command).c_str());ReleaseMutex(navigationMutex);return 1;}
+        if(selfTest&&(command.rfind(L"WEBCAPTURE_FIT:",0)==0||command.rfind(L"WEBCAPTURE_TOUCH:",0)==0||command.rfind(L"WEBCAPTURE_PERSIST:",0)==0||command.rfind(L"WEBCAPTURE_RELOAD:",0)==0)&&WaitForSingleObject(navigationMutex,100)==WAIT_OBJECT_0){if(wcslen(shared->error)+command.size()+4<std::size(shared->error))wcscat_s(shared->error,(L" | "+command).c_str());ReleaseMutex(navigationMutex);return 1;}
         if(command==L"__WC_WHEEL__:reels:1"||command==L"__WC_WHEEL__:reels:-1"||command==L"__WC_WHEEL__:stories:1"||command==L"__WC_WHEEL__:stories:-1"||command==L"__WC_WHEEL__:scroll:1"||command==L"__WC_WHEEL__:scroll:-1"||command==L"__WC_WHEEL__:horizontal:1"||command==L"__WC_WHEEL__:horizontal:-1"){
-            wheelGesture(command.find(L":stories:")!=std::wstring::npos,command.back()==L'1'&&command[command.size()-2]!=L'-'?1:-1,command.find(L":horizontal:")!=std::wstring::npos,command.find(L":scroll:")!=std::wstring::npos);return 1;
+            const bool stories=command.find(L":stories:")!=std::wstring::npos,horizontal=command.find(L":horizontal:")!=std::wstring::npos;const int direction=command[command.size()-2]==L'-'?-1:1;
+            if(inputGate.accept(horizontal,stories,direction,GetTickCount64()))wheelGesture(stories,direction,horizontal,command.find(L":scroll:")!=std::wstring::npos);return 1;
         }
         if(selfTest){std::wstring text((wchar_t*)msg->str,msg->length);if(text.rfind(L"WEBCAPTURE_CODECS:",0)==0&&WaitForSingleObject(navigationMutex,100)==WAIT_OBJECT_0){wcsncpy_s(shared->error,text.c_str(),_TRUNCATE);ReleaseMutex(navigationMutex);}}return 0;};
     auto*dialog=new Ref<cef_jsdialog_handler_t>;
     dialog->api.on_jsdialog=[](cef_jsdialog_handler_t*,cef_browser_t*,const cef_string_t* url,cef_jsdialog_type_t type,const cef_string_t* message,const cef_string_t* prompt,cef_jsdialog_callback_t*callback,int*)->int{
         const std::wstring text((wchar_t*)message->str,message->length);
         if(type!=JSDIALOGTYPE_PROMPT||(text!=L"__WC_PASSWORD_LOAD__"&&text!=L"__WC_PASSWORD_SAVE__"))return 0;
+        const std::wstring dialogOrigin((wchar_t*)url->str,url->length);
+        if(!passwords::sameTopOrigin(dialogOrigin,currentAddress)||!prompt||prompt->length>16384){String empty(L"{}");callback->cont(callback,1,&empty.value);return 1;}
         const auto site=passwords::origin(std::wstring((wchar_t*)url->str,url->length));std::wstring reply=L"{}",user,secret;
         if(!site.empty()&&text==L"__WC_PASSWORD_LOAD__"){
             if(passwords::read(site,user,secret))reply=L"{\"user\":"+passwords::json(user)+L",\"password\":"+passwords::json(secret)+L"}";
         }else if(!site.empty()){
             auto*value=cef_parse_json(prompt,JSON_PARSER_RFC);
-            if(value){auto*dict=value->get_dictionary(value);if(dict){String u(L"user"),p(L"password");auto a=dict->get_string(dict,&u.value),b=dict->get_string(dict,&p.value);
+            if(value){auto*dict=value->get_type(value)==VTYPE_DICTIONARY?value->get_dictionary(value):nullptr;if(dict){String u(L"user"),p(L"password");auto a=dict->get_string(dict,&u.value),b=dict->get_string(dict,&p.value);
                 if(a){user.assign((wchar_t*)a->str,a->length);cef_string_userfree_utf16_free(a);}if(b){secret.assign((wchar_t*)b->str,b->length);if(b->str)SecureZeroMemory(b->str,b->length*sizeof(char16_t));cef_string_userfree_utf16_free(b);}release(dict);}release(value);}
             reply=L"cancel";
             if(!secret.empty()){
@@ -231,14 +248,8 @@ int run(HINSTANCE instance,void* sandbox){
     observer->api.on_dev_tools_method_result=[](cef_dev_tools_message_observer_t*,cef_browser_t*,int,int,const void*,size_t){};
     auto*host=active->get_host(active);auto*registration=host->add_dev_tools_message_observer(host,&observer->api);release(host);
     if(homeTest)navigate(L"webcapture://home");
-    shared->window=(uint64_t)(uintptr_t)root;mouseHook=SetWindowsHookExW(WH_MOUSE,mouseProc,nullptr,GetCurrentThreadId());SetTimer(root,1,16,nullptr);cef_run_message_loop();if(mouseHook)UnhookWindowsHookEx(mouseHook);KillTimer(root,1);DestroyWindow(root);
+    shared->window=(uint64_t)(uintptr_t)root;mouseHook=SetWindowsHookExW(WH_MOUSE,mouseProc,nullptr,GetCurrentThreadId());keyboardHook=SetWindowsHookExW(WH_KEYBOARD,keyboardProc,nullptr,GetCurrentThreadId());SetTimer(root,1,16,nullptr);cef_run_message_loop();if(mouseHook)UnhookWindowsHookEx(mouseHook);if(keyboardHook)UnhookWindowsHookEx(keyboardHook);KillTimer(root,1);DestroyWindow(root);
     release(registration);observer->release();cef_shutdown();client->release();life->release();audio->release();load->release();display->release();dialog->release();if(profileMutex){ReleaseMutex(profileMutex);CloseHandle(profileMutex);}CloseHandle(navigationMutex);UnmapViewOfFile(shared);CloseHandle(mapping);return 0;
 }
 }
 extern "C" __declspec(dllexport) int RunWinMain(HINSTANCE instance,LPTSTR,int,void*sandbox,cef_version_info_t*){return run(instance,sandbox);}
-
-
-
-
-
-

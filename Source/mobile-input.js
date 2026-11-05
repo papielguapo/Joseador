@@ -21,14 +21,14 @@
  addEventListener('pointermove',e=>{hover=e.target;report();},{passive:true,capture:true});
  addEventListener('popstate',report);addEventListener('hashchange',report);setInterval(report,500);report();
  addEventListener('keydown',e=>{
-   if(e.ctrlKey||e.altKey||e.metaKey||e.shiftKey||blocked(e.target))return;
+   if(!e.isTrusted||e.ctrlKey||e.altKey||e.metaKey||e.shiftKey||blocked(e.target))return;
    const direction={ArrowDown:1,ArrowRight:1,ArrowUp:-1,ArrowLeft:-1}[e.key];
    const m=mode();if(!direction||!m)return;e.preventDefault();
    const horizontal=e.key==='ArrowLeft'||e.key==='ArrowRight';
    console.debug('__WC_WHEEL__:'+(m==='stories'?'stories':horizontal?'horizontal':m)+':'+direction);
  },{capture:true});
  addEventListener('wheel',e=>{
-   if(e.ctrlKey||e.metaKey||Math.abs(e.deltaX)>Math.abs(e.deltaY)||!e.deltaY)return;
+   if(!e.isTrusted||e.ctrlKey||e.metaKey||Math.abs(e.deltaX)>Math.abs(e.deltaY)||!e.deltaY)return;
    if(blocked(e.target))return;
    const m=mode();if(!m)return;
    e.preventDefault();

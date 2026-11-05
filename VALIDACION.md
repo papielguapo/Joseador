@@ -1,4 +1,4 @@
-# Validación de Joseador 0.3.0
+# Validación de Joseador 0.3.1
 
 Windows 11 x64, MSVC, SDK 10.0.26100, JUCE 8.0.6, CEF API 15000 y motor CEF 150.0.10 con H.264/AAC.
 
@@ -18,3 +18,5 @@ La revisión visual previa en FL Studio 2026 confirmó Synth x64 y YouTube móvi
 
 - Historial CEF con navegación activada por usuario: dos pasos atrás llegaron a Inicio y una tercera pulsación permaneció allí (HISTORY:yes). El buscador muestra la dirección actual al perder el foco.
 - VST3 recompilado con botón Atrás/Inicio y sin micrófono; campo ampliado.
+
+Actualización 0.3.1: botón Actualizar página, prueba CEF RELOAD:yes, tres suites CTest superadas y validación visual de recarga y entrada nativa. Véase [la auditoría con el alcance exacto](docs/AUDITORIA.md). Las pruebas históricas de persistencia se mantienen documentadas; no se ha repetido el inicio de sesión con cuentas reales.

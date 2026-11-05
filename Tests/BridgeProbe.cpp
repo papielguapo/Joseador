@@ -21,7 +21,8 @@ int wmain(int argc,wchar_t**argv){
  const std::wstring folder=argv[1];auto command=L"\""+folder+L"\\MobileBrowser.exe\" --autoplay-policy=no-user-gesture-required --bridge="+name+L" --self-test";
  const bool persistence=argc>2&&std::wstring(argv[2]).rfind(L"--profile-test=",0)==0;
  const bool history=argc>2&&std::wstring(argv[2])==L"--history-test";
- if(persistence||history)command+=L" "+std::wstring(argv[2]);else if(argc>2)command+=L" --home-test";
+ const bool reload=argc>2&&std::wstring(argv[2])==L"--reload-test";
+ if(persistence||history||reload)command+=L" "+std::wstring(argv[2]);else if(argc>2)command+=L" --home-test";
  if(argc>3)command+=L" --small";
  STARTUPINFOW startup{};startup.cb=sizeof(startup);PROCESS_INFORMATION proc{};
  if(!CreateProcessW(nullptr,command.data(),nullptr,nullptr,FALSE,CREATE_NO_WINDOW,nullptr,folder.c_str(),&startup,&proc))return 2;
@@ -47,6 +48,7 @@ int wmain(int argc,wchar_t**argv){
     if(argc==2&&!wcsstr(b->error,L"TOUCH:yes"))result=8;
     if(persistence&&!wcsstr(b->error,L"PERSIST:yes"))result=9;
     if(history&&!wcsstr(b->error,L"HISTORY:yes"))result=10;
+    if(reload&&!wcsstr(b->error,L"RELOAD:yes"))result=11;
    }
   }
  }

@@ -15,6 +15,7 @@ public:
         if(!bridge){shutdown();error="No se pudo abrir el puente de audio";return false;}
         new(bridge) webcapture::Bridge(); bridge->sampleRate=(uint32_t)rate.load();
         mutex=CreateMutexW(nullptr,FALSE,(name+L"-ui").c_str());
+        if(!mutex){error="No se pudo crear el control del navegador";shutdown();return false;}
         auto exe=runtime.getChildFile("MobileBrowser.exe");
         if(!exe.existsAsFile()){error="Falta el motor BrowserRuntime junto al VST3";shutdown();return false;}
         auto command=L"\""+std::wstring(exe.getFullPathName().toWideCharPointer())+L"\" --autoplay-policy=no-user-gesture-required --bridge=\""+name+L"\""+(selfTest?L" --self-test":L"");

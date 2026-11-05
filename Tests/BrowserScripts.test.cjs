@@ -8,13 +8,15 @@ function wheel(hostname, pathname, video, expected) {
   const context = {location:{hostname,pathname,protocol:'https:'},document:{querySelector:()=>video?{}:null,body:{}},console:{debug:x=>messages.push(x)},performance:{now:()=>1000},innerHeight:600,setInterval:()=>{},addEventListener:(n,fn)=>handlers[n]=fn};
   context.window=context;vm.runInNewContext(source('mobile-input.js'),context);
   assert.equal(messages[0], '__WC_MODE__:'+(expected||'normal'));
-  let prevented=false;handlers.wheel({target:{},deltaY:120,deltaX:0,deltaMode:0,preventDefault:()=>prevented=true});
+  let prevented=false;handlers.wheel({isTrusted:true,target:{},deltaY:120,deltaX:0,deltaMode:0,preventDefault:()=>prevented=true});
   assert.equal(prevented,!!expected);
   if(expected)assert.equal(messages.at(-1),'__WC_WHEEL__:'+expected+':1');
   for(const [key,axis,direction] of [['ArrowDown',expected,1],['ArrowUp',expected,-1],['ArrowLeft',expected==='stories'?'stories':'horizontal',-1],['ArrowRight',expected==='stories'?'stories':'horizontal',1]]){
-    handlers.keydown({key,target:{},preventDefault:()=>{}});assert.equal(messages.at(-1),'__WC_WHEEL__:'+axis+':'+direction);
+    handlers.keydown({isTrusted:true,key,target:{},preventDefault:()=>{}});assert.equal(messages.at(-1),'__WC_WHEEL__:'+axis+':'+direction);
   }
-  const count=messages.length;handlers.keydown({key:'ArrowDown',target:{closest:()=>true},preventDefault:()=>{throw Error('editable intercepted');}});assert.equal(messages.length,count);
+  const count=messages.length;handlers.keydown({isTrusted:true,key:'ArrowDown',target:{closest:()=>true},preventDefault:()=>{throw Error('editable intercepted');}});assert.equal(messages.length,count);
+  handlers.keydown({isTrusted:false,key:'ArrowDown',target:{},preventDefault:()=>{throw Error('synthetic key accepted');}});
+  handlers.wheel({isTrusted:false,target:{},deltaY:120,deltaX:0,preventDefault:()=>{throw Error('synthetic wheel accepted');}});assert.equal(messages.length,count);
 }
 wheel('www.tiktok.com','/@test/video/1',true,'reels');
 wheel('www.instagram.com','/reels/1/',true,'reels');
