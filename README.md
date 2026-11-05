@@ -4,7 +4,7 @@
 
 [**Descargar VST3**](https://github.com/papielguapo/Joseador/releases/latest) · [**Guía de instalación y uso**](docs/GUIA.md)
 
-<img src="docs/images/joseador.png" alt="Interfaz real de Joseador con pantalla móvil, once accesos web y buscador inferior" width="400">
+<img src="docs/images/joseador.jpg" alt="Interfaz real de Joseador con pantalla móvil, once accesos web y buscador inferior" width="400">
 
 *Pantalla de Inicio real, capturada en la aplicación de escritorio que comparte el editor del VST3.*
 

@@ -4,7 +4,7 @@
 
 Joseador abre páginas web en una ventana móvil y entrega su audio al DAW. En FL Studio se carga como instrumento en el Channel Rack.
 
-<img src="images/joseador.png" alt="Pantalla de inicio real de Joseador, con once accesos y buscador inferior" width="400">
+<img src="images/joseador.jpg" alt="Pantalla de inicio real de Joseador, con once accesos y buscador inferior" width="400">
 
 *Captura real de la aplicación de escritorio, que comparte la interfaz del editor VST3. El marco recuerda a un iPhone; el navegador funciona en Windows.*
 
