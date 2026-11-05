@@ -2,6 +2,12 @@
 
 **Creador: PAPIELGUAPO.** Instrumento VST3 para Windows 11 x64 con navegador móvil reescalable y audio exclusivo al DAW. Anteriormente llamado WebCapture Mobile.
 
+[**Descargar VST3**](https://github.com/papielguapo/Joseador/releases/latest) · [**Guía de instalación y uso**](docs/GUIA.md)
+
+<img src="docs/images/joseador.png" alt="Interfaz real de Joseador con pantalla móvil, once accesos web y buscador inferior" width="400">
+
+*Pantalla de Inicio real, capturada en la aplicación de escritorio que comparte el editor del VST3.*
+
 ## Instalar en FL Studio
 
 Descarga el ZIP desde [Releases](https://github.com/papielguapo/Joseador/releases), extráelo y ejecuta install.ps1 con FL Studio cerrado. Conserva toda la carpeta Joseador.vst3, incluido BrowserRuntime.
