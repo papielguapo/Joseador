@@ -1,0 +1,24 @@
+# Build outputs and downloaded engines (CEF contains files larger than GitHub's limit).
+/.deps/
+/build/
+*.vst3/
+*.zip
+*.7z
+*.tar.bz2
+*.obj
+*.lib
+*.exp
+*.pdb
+*.exe
+*.dll
+*.log
+*.wav
+# Browser user data and credentials never belong in source control.
+Profiles/
+User Data/
+Cookies*
+Login Data*
+Local State
+Session Storage/
+Local Storage/
+*.previous-*
