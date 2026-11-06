@@ -105,3 +105,5 @@ El círculo rojo de Inicio cuenta mensajes sin leer: de 1 a 99; por encima de 99
 [Auditoría y correcciones de 0.4.2](AUDITORIA-0.4.2.md).
 
 [Corrección de scroll de 0.4.3](CORRECCION-SCROLL-0.4.3.md).
+
+En Instagram y Facebook Reels, usa la rueda abajo/arriba para avanzar/retroceder. En historias, los mismos movimientos corresponden al lado derecho/izquierdo de la pantalla. Los campos de texto y paneles de comentarios conservan su entrada. Las webs del menú permanecen dentro del navegador al intentar abrir un protocolo de aplicación externa.

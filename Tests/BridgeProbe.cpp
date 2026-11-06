@@ -24,7 +24,7 @@ int wmain(int argc,wchar_t**argv){
  const bool reload=argc>2&&std::wstring(argv[2])==L"--reload-test";
  const bool stress=argc>2&&std::wstring(argv[2])==L"--joseador-stress-test",crash=argc>2&&std::wstring(argv[2])==L"--joseador-recovery-test";
  const bool webOnly=argc>2&&std::wstring(argv[2])==L"--joseador-web-only-test";
- const bool nativeInput=argc>2&&std::wstring(argv[2])==L"--joseador-native-input-test";
+ const bool nativeInput=argc>2&&std::wstring(argv[2]).rfind(L"--joseador-native-input-test",0)==0;
  if(persistence||history||reload||stress||crash||nativeInput||webOnly)command+=L" "+std::wstring(argv[2]);else if(argc>2)command+=L" --home-test";
  if(argc>3)command+=L" --small";
  STARTUPINFOW startup{};startup.cb=sizeof(startup);PROCESS_INFORMATION proc{};

@@ -10,7 +10,9 @@
    const p=location.pathname.toLowerCase(),h=location.hostname.toLowerCase();
    if(/(^|\.)tiktok\.com$/.test(h)&&document.querySelector('video'))return 'reels';
    if(/(^|\.)(instagram|facebook)\.com$/.test(h)){
-     if(/\/stories\//.test(p))return 'stories';
+     if(/\/stories(\/|$)/.test(p))return 'stories';
+     // Audio/template listings are ordinary pages, not a video viewer.
+     if(/\/reels?\/(audio|create|templates?)(\/|$)/.test(p))return 'scroll';
      if(/\/reels?(\/|$)/.test(p))return 'reels';
    }
    if(/(^|\.)youtube\.com$/.test(h)&&p.startsWith('/shorts/'))return 'reels';
@@ -30,6 +32,8 @@
  const report=(force=false)=>{const target=pointerX>=0&&pointerY>=0?document.elementFromPoint?.(pointerX,pointerY)||hover:hover;const value=blocked(target)?'normal':(mode()||'normal');if(force||value!==reported){reported=value;console.debug('__WC_MODE__:'+value);}};
  const point=e=>{hover=e.target;pointerX=e.clientX??-1;pointerY=e.clientY??-1;report();};
  addEventListener('pointermove',point,{passive:true,capture:true});addEventListener('pointerdown',point,{passive:true,capture:true});
+ addEventListener('focusin',()=>report(true),{capture:true});
+ addEventListener('pointerout',e=>{if(!e.relatedTarget){hover=null;pointerX=pointerY=-1;report(true);}},{passive:true,capture:true});
  addEventListener('popstate',()=>report(true));addEventListener('hashchange',()=>report(true));addEventListener('pageshow',()=>report(true));addEventListener('resize',()=>report(true));setInterval(()=>report(true),500);report();
  addEventListener('keydown',e=>{
    if(!e.isTrusted||e.ctrlKey||e.altKey||e.metaKey||e.shiftKey||blocked(e.target))return;

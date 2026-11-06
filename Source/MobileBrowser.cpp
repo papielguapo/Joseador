@@ -62,6 +62,7 @@ bool stressTest=false,crashTest=false,crashIssued=false;
 bool nativeInputTest=false,webOnlyTest=false;
 int blockedAppNavigations=0;
 bool nativeModeReset=false;
+std::string nativeTestMode="scroll";
 bool returningBack=false;
 std::wstring currentAddress;
 bool historyTest=false,historyOk=true;int historyStep=-1;ULONGLONG historyStarted=0;
@@ -91,7 +92,7 @@ void fitDocument(cef_frame_t*frame){
     std::ifstream stream(path);std::string input((std::istreambuf_iterator<char>(stream)),std::istreambuf_iterator<char>());
     // This controlled data document has no HTTP origin. Only the self-test
     // enables its scroll route; production script and scheme checks stay intact.
-    if(nativeInputTest){const std::string guard="if(!/^https?:$/.test(location.protocol))return '';";const auto pos=input.find(guard);if(pos!=std::string::npos)input.erase(pos,guard.size());}
+    if(nativeInputTest){const std::string guard="if(!/^https?:$/.test(location.protocol))return '';";const auto pos=input.find(guard);if(pos!=std::string::npos)input.replace(pos,guard.size(),nativeTestMode=="scroll"?"":"return '"+nativeTestMode+"';");}
     {std::ifstream fitFile(path.substr(0,path.find_last_of(L"\\/"))+L"\\mobile-fit.js");std::string code((std::istreambuf_iterator<char>(fitFile)),{});if(!code.empty()){String fit(std::wstring(code.begin(),code.end()));frame->execute_java_script(frame,&fit.value,&origin.value,0);}}
     if(!input.empty()){String wheel(std::wstring(input.begin(),input.end()));frame->execute_java_script(frame,&wheel.value,&origin.value,0);}
     path=path.substr(0,path.find_last_of(L"\\/"))+L"\\passwords.js";
@@ -198,6 +199,7 @@ int run(HINSTANCE instance,void* sandbox){
     stressTest=selfTest&&std::wstring(GetCommandLineW()).find(L"--joseador-stress-test")!=std::wstring::npos;crashTest=selfTest&&std::wstring(GetCommandLineW()).find(L"--joseador-recovery-test")!=std::wstring::npos;
     webOnlyTest=selfTest&&std::wstring(GetCommandLineW()).find(L"--joseador-web-only-test")!=std::wstring::npos;if(webOnlyTest)homeTest=true;
     nativeInputTest=selfTest&&std::wstring(GetCommandLineW()).find(L"--joseador-native-input-test")!=std::wstring::npos;
+    if(nativeInputTest){const std::wstring args=GetCommandLineW();if(args.find(L"--joseador-native-input-test=stories")!=std::wstring::npos)nativeTestMode="stories";else if(args.find(L"--joseador-native-input-test=reels")!=std::wstring::npos)nativeTestMode="reels";}
     if(!sandbox){shared->fault=1;return 34;}
     cef_settings_t settings{};settings.size=sizeof(settings);settings.log_severity=LOGSEVERITY_DISABLE;
     wchar_t local[MAX_PATH];GetEnvironmentVariableW(L"LOCALAPPDATA",local,MAX_PATH);
@@ -242,7 +244,10 @@ int run(HINSTANCE instance,void* sandbox){
             frame->execute_java_script(frame,&persistence.value,&origin.value,0);
         }
         String check(L"setTimeout(()=>console.debug('WEBCAPTURE_FIT:'+((document.documentElement.scrollHeight<=innerHeight+2&&document.documentElement.scrollWidth<=innerWidth+2)?'yes':'no')),300)");frame->execute_java_script(frame,&check.value,&origin.value,0);
-        if(nativeInputTest){String fixture(L"document.body.style='margin:0;height:100vh;touch-action:none';let starts=[],moves=0,trusted=true;addEventListener('touchstart',e=>{starts.push([e.touches[0].clientY,0]);trusted=trusted&&e.isTrusted;},{passive:false});addEventListener('touchmove',e=>{e.preventDefault();moves++;starts[starts.length-1][1]=e.touches[0].clientY;trusted=trusted&&e.isTrusted;},{passive:false});setTimeout(()=>console.debug('WEBCAPTURE_NATIVE_INPUT:'+((trusted&&moves>8&&starts.length===4&&starts.every((s,i)=>i%2?s[1]>s[0]+30:s[1]<s[0]-30))?'yes':'no')+':'+starts.length+':'+moves),3550);");frame->execute_java_script(frame,&fixture.value,&origin.value,0);testStarted=GetTickCount64();}
+        if(nativeInputTest){
+            const std::wstring expected=nativeTestMode=="stories"?L"trusted&&moves===0&&starts.length===4&&starts.every((s,i)=>i%2?s[2]<innerWidth*.4:s[2]>innerWidth*.6)":L"trusted&&moves>8&&starts.length===4&&starts.every((s,i)=>i%2?s[1]>s[0]+30:s[1]<s[0]-30)";
+            String fixture(L"document.body.style='margin:0;height:100vh;touch-action:none';let starts=[],moves=0,trusted=true;addEventListener('touchstart',e=>{starts.push([e.touches[0].clientY,0,e.touches[0].clientX]);trusted=trusted&&e.isTrusted;},{passive:false});addEventListener('touchmove',e=>{e.preventDefault();moves++;starts[starts.length-1][1]=e.touches[0].clientY;trusted=trusted&&e.isTrusted;},{passive:false});setTimeout(()=>console.debug('WEBCAPTURE_NATIVE_INPUT:'+(("+expected+L")?'yes':'no')+':'+starts.length+':'+moves),3550);");frame->execute_java_script(frame,&fixture.value,&origin.value,0);testStarted=GetTickCount64();}
+
         else if(stressTest){String fixture(L"document.body.style='margin:0;height:100vh;touch-action:none';let starts=0,ends=0,moves=0,active=0,valid=true;addEventListener('touchstart',e=>{starts++;active++;valid=valid&&e.isTrusted&&active===1;},{passive:false});addEventListener('touchmove',e=>{e.preventDefault();moves++;valid=valid&&e.isTrusted;},{passive:false});addEventListener('touchend',e=>{ends++;active--;valid=valid&&e.isTrusted;const n=document.createElement('div');n.textContent='Reel '+ends;document.body.replaceChildren(n);},{passive:false});setTimeout(()=>console.debug('WEBCAPTURE_STRESS:'+((valid&&starts===60&&ends===60&&moves>300&&active===0)?'yes':'no')),44200);");frame->execute_java_script(frame,&fixture.value,&origin.value,0);testStarted=GetTickCount64();}
         else if(!homeTest&&!crashTest){String fixture(L"document.body.style='margin:0;height:100vh;touch-action:none';let starts=[],moves=0,trusted=true;addEventListener('touchstart',e=>{starts.push([e.touches[0].clientY,0]);trusted=trusted&&e.isTrusted;},{passive:false});addEventListener('touchmove',e=>{e.preventDefault();moves++;starts[starts.length-1][1]=e.touches[0].clientY;trusted=trusted&&e.isTrusted;},{passive:false});setTimeout(()=>console.debug('WEBCAPTURE_TOUCH:'+((trusted&&moves>4&&starts.length===2&&starts[0][1]<starts[0][0]-30&&starts[1][1]>starts[1][0]+30)?'yes':'no')),1600);");frame->execute_java_script(frame,&fixture.value,&origin.value,0);testStarted=GetTickCount64();}
         if(crashTest&&!crashIssued)testStarted=GetTickCount64();
