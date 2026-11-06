@@ -27,10 +27,10 @@
      }
    }return false;
  };
- const report=()=>{const target=pointerX>=0&&pointerY>=0?document.elementFromPoint?.(pointerX,pointerY)||hover:hover;const value=blocked(target)?'normal':(mode()||'normal');if(value!==reported){reported=value;console.debug('__WC_MODE__:'+value);}};
+ const report=(force=false)=>{const target=pointerX>=0&&pointerY>=0?document.elementFromPoint?.(pointerX,pointerY)||hover:hover;const value=blocked(target)?'normal':(mode()||'normal');if(force||value!==reported){reported=value;console.debug('__WC_MODE__:'+value);}};
  const point=e=>{hover=e.target;pointerX=e.clientX??-1;pointerY=e.clientY??-1;report();};
  addEventListener('pointermove',point,{passive:true,capture:true});addEventListener('pointerdown',point,{passive:true,capture:true});
- addEventListener('popstate',report);addEventListener('hashchange',report);setInterval(report,500);report();
+ addEventListener('popstate',()=>report(true));addEventListener('hashchange',()=>report(true));addEventListener('pageshow',()=>report(true));addEventListener('resize',()=>report(true));setInterval(()=>report(true),500);report();
  addEventListener('keydown',e=>{
    if(!e.isTrusted||e.ctrlKey||e.altKey||e.metaKey||e.shiftKey||blocked(e.target))return;
    const direction={ArrowDown:1,ArrowRight:1,ArrowUp:-1,ArrowLeft:-1}[e.key];

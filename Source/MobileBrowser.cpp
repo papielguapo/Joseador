@@ -53,6 +53,7 @@ cef_browser_t* active=nullptr;
 bool closing=false,selfTest=false,homeTest=false;
 bool stressTest=false,crashTest=false,crashIssued=false;
 bool nativeInputTest=false;
+bool nativeModeReset=false;
 bool returningBack=false;
 std::wstring currentAddress;
 bool historyTest=false,historyOk=true;int historyStep=-1;ULONGLONG historyStarted=0;
@@ -155,6 +156,7 @@ LRESULT CALLBACK windowProc(HWND hwnd,UINT message,WPARAM wp,LPARAM lp){
             ++historyStep;
         }
         if(selfTest&&!homeTest&&!crashTest&&testStarted){const auto elapsed=GetTickCount64()-testStarted;
+            if(nativeInputTest&&testStep==1&&!nativeModeReset&&elapsed>700){cancelSwipe();nativeModeReset=true;}
             if(nativeInputTest){if(testStep<4&&elapsed>250+testStep*900){const int direction=testStep%2?-1:1;if(testStep<2){MOUSEHOOKSTRUCTEX event{};event.pt={width/2,height/2};ClientToScreen(root,&event.pt);event.mouseData=MAKEWPARAM(0,direction>0?-120:120);mouseProc(HC_ACTION,WM_MOUSEWHEEL,(LPARAM)&event);}else{inputGate.record(1,direction,GetTickCount64());const std::string key=direction>0?"ArrowDown":"ArrowUp";protocol("Input.dispatchKeyEvent","{\"type\":\"keyDown\",\"key\":\""+key+"\",\"code\":\""+key+"\",\"windowsVirtualKeyCode\":"+std::to_string(direction>0?40:38)+"}");protocol("Input.dispatchKeyEvent","{\"type\":\"keyUp\",\"key\":\""+key+"\",\"code\":\""+key+"\"}");}++testStep;}}
             else if(stressTest){if(testStep<60&&elapsed>250+testStep*720){wheelGesture(false,testStep%2?-1:1);++testStep;}}
             else if(testStep==0&&elapsed>250){wheelGesture(false,1);++testStep;}

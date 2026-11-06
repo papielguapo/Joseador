@@ -15,5 +15,6 @@ assert.equal(messages.filter(x=>x==='__WC_WHEEL__:reels:1').length,60);
 const total=messages.length;for(let i=0;i<100;++i){now+=1;wheel({});}assert.equal(messages.length,total,'wheel burst generated overlapping gestures');
 events.keydown({target:comment,isTrusted:true,key:'ArrowDown',preventDefault(){throw Error('comment keyboard intercepted');}});
 let hit=comment;context.document.elementFromPoint=()=>hit;events.pointermove({target:{},clientX:50,clientY:50});assert.equal(messages.at(-1),'__WC_MODE__:normal');hit={};poll();assert.equal(messages.at(-1),'__WC_MODE__:reels');hit=comment;poll();assert.equal(messages.at(-1),'__WC_MODE__:normal');
+const previousModeCount=messages.length;poll();assert.equal(messages.length,previousModeCount+1,'native mode not republished after reset');
 events.error({target:{tagName:'VIDEO',error:{code:3},getBoundingClientRect:()=>({width:200,height:300,top:0,bottom:300})}});assert.equal(messages.at(-1),'__WC_MEDIA__:3');events.playing({target:{tagName:'VIDEO'}});assert.equal(messages.at(-1),'__WC_MEDIA__:ok');
 console.log('PASS: 500 fit injections, nested comments, 60 reel steps, 100-event wheel burst');

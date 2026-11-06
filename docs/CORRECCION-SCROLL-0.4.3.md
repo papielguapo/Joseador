@@ -2,7 +2,9 @@
 
 En 0.4.2 se retiró la conversión nativa de la rueda para delegarla en el evento wheel del documento. Con la emulación móvil esa entrega no es fiable: se podía recibir entrada de ratón sin producir el gesto táctil. La prueba anterior empezaba directamente en la función del gesto y no detectaba ese fallo de conexión.
 
-Se restaura la conversión en el manejador nativo, conservando los límites entre gestos y la cancelación al navegar. El modo se actualiza según el elemento real bajo las últimas coordenadas del cursor, incluso si la web cambia el DOM sin mover el ratón. Los comentarios desplazables y campos pueden conservar su comportamiento normal. El evento original se consume cuando se convierte, para evitar un segundo gesto por JavaScript.
+Se restaura la conversión en el manejador nativo, conservando los límites entre gestos y la cancelación al navegar. El modo se actualiza según el elemento real bajo las últimas coordenadas del cursor, incluso si la web cambia el DOM sin mover el ratón. Los comentarios desplazables y campos pueden conservar su comportamiento normal. Se vuelve a publicar el modo periódicamente y al redimensionar o volver a una página: una cancelación de gesto podía borrarlo en el proceso nativo mientras JavaScript consideraba que no había cambiado. Se añade una segunda regresión, que borra ese modo entre los dos movimientos de rueda. El script anterior falla; la resincronización nueva recupera el modo y pasa.
+
+El evento original se consume cuando se convierte, para evitar un segundo gesto por JavaScript.
 
 ## Regresión reproducida y verificación
 
