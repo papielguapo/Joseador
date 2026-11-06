@@ -30,5 +30,18 @@ try{
  eq((await request('/api/messages?after=9999999999999999')).status,400);
  eq((await request('/api/status')).headers.get('access-control-allow-origin'),'*');eq((await request('/api/status')).headers.get('cache-control'),'no-store');
  for(let i=0;i<9;++i)await request('/api/session',{method:'POST',token:a.token,body:{name:'Cambio '+i}});eq((await request('/api/session',{method:'POST',token:a.token,body:{name:'Cambio extra'}})).status,429);
- console.log('PASS: '+assertions+' chat checks (auth, nickname, retry, rate, pagination, 99 cap, validation)');
+ // Fill only this in-memory database, then exercise the real POST cleanup twice.
+ sqlite.exec('BEGIN');for(let i=0;i<5000;++i)insert.run(crypto.randomUUID(),'seed','Local','Retencion '+i,now);sqlite.exec('COMMIT');
+ now+=2100;const rotation=await request('/api/messages',{method:'POST',token:a.token,body:{key:crypto.randomUUID(),text:'Sigue abierto tras 5000'}});
+ eq(rotation.status,201);eq(sqlite.prepare('SELECT COUNT(*) AS n FROM messages').get().n,5000);
+ eq(sqlite.prepare('SELECT id FROM messages WHERE id=?').get(sent.data.message.id),undefined);
+ eq(sqlite.prepare('SELECT MIN(id) AS id FROM messages').get().id,rotation.data.message.id-4999);
+ const oldest=sqlite.prepare('SELECT MIN(id) AS id FROM messages').get().id;
+ now+=2100;const continued=await request('/api/messages',{method:'POST',token:a.token,body:{key:crypto.randomUUID(),text:'Otro mensaje sin cerrar la sala'}});
+ eq(continued.status,201);eq(sqlite.prepare('SELECT COUNT(*) AS n FROM messages').get().n,5000);
+ eq(sqlite.prepare('SELECT MIN(id) AS id FROM messages').get().id,oldest+1);
+ eq(sqlite.prepare('SELECT body FROM messages WHERE id=?').get(rotation.data.message.id).body,'Sigue abierto tras 5000');
+ eq((await request('/api/messages?after='+rotation.data.message.id)).data.messages.map(m=>m.id),[continued.data.message.id]);
+ eq((await request('/api/status?after='+continued.data.message.id)).data.unread,0);
+ console.log('PASS: '+assertions+' chat checks (auth, nickname, retry, rate, pagination, 99 cap, validation, oldest-first 5000 retention, continued delivery)');
 }finally{Date.now=realNow;sqlite.close()}

@@ -98,7 +98,7 @@ El audio se entrega en estéreo de 32 bits float, con calidad limitada por la fu
 
 Abre el icono verde de Mensajes con PT. Introduce un apodo de 1 a 24 caracteres y pulsa Entrar. Ese nombre aparece en tus mensajes. Cambiar apodo permite elegir otro para los siguientes envíos. Enter envía y Mayús+Enter añade una línea.
 
-El círculo rojo de Inicio cuenta mensajes sin leer: de 1 a 99; por encima de 99 sigue mostrando 99. Se oculta cuando no quedan mensajes sin leer. El contador se actualiza al abrir y leer la sala, y se conserva por perfil. La sala es pública y los apodos no verifican la identidad. Se guardan hasta 5.000 mensajes.
+El círculo rojo de Inicio cuenta mensajes sin leer: de 1 a 99; por encima de 99 sigue mostrando 99. Se oculta cuando no quedan mensajes sin leer. El contador se actualiza al abrir y leer la sala, y se conserva por perfil. La sala es pública y los apodos no verifican la identidad. Se guardan los últimos 5.000 mensajes. Al llegar al límite, cada mensaje nuevo elimina automáticamente el más antiguo; el chat continúa funcionando sin reiniciarlo.
 
 [Abre la sala](https://part-time-gang.tangycondor.chatgpt.site). Cambiar a esta página puede detener el contenido web anterior; las otras pistas del DAW siguen funcionando.
 

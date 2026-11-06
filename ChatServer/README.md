@@ -8,11 +8,11 @@ Usa Vinext/React, Cloudflare Workers y D1 mediante Sites. La fuente desplegada c
 
 ## Funciones
 
-Apodos de invitado, cambio de apodo para mensajes posteriores, historial público, envío autenticado mediante token de invitado, reintentos sin duplicación, paginación y contador 0–99. El servidor guarda hashes de tokens. Los apodos no verifican identidad. Se conservan hasta 5.000 mensajes.
+Apodos de invitado, cambio de apodo para mensajes posteriores, historial público, envío autenticado mediante token de invitado, reintentos sin duplicación, paginación y contador 0–99. El servidor guarda hashes de tokens. Los apodos no verifican identidad. Se conservan hasta 5.000 mensajes: cada mensaje nuevo elimina automáticamente los más antiguos que excedan ese límite. La sala sigue aceptando mensajes; no hay que vaciarla ni reiniciarla.
 
 ## Desarrollo
 
-Requiere Node 22.13 o posterior. Instala dependencias con npm ci. Ejecuta node scripts/test-chat.mjs para las 26 comprobaciones en una base SQLite en memoria. Para publicar usa el flujo de Sites y sus helpers; .openai/hosting.json identifica la sala actual y requiere autorización del propietario para desplegar. No insertes tokens o claves en ese archivo.
+Requiere Node 22.13 o posterior. Instala dependencias con npm ci. Ejecuta node scripts/test-chat.mjs para las 36 comprobaciones en una base SQLite en memoria, incluida la eliminación de los mensajes más antiguos y la recepción continuada al superar los 5.000. Para publicar usa el flujo de Sites y sus helpers; .openai/hosting.json identifica la sala actual y requiere autorización del propietario para desplegar. No insertes tokens o claves en ese archivo.
 
 La migración inicial está en drizzle/0000_clumsy_mandarin.sql. Las bases locales y de producción están separadas. No cambies migraciones ya aplicadas; añade nuevas.
 
