@@ -1,4 +1,4 @@
-# JOSEADOR 0.4.2
+# JOSEADOR 0.4.3
 
 **Por PAPIELGUAPO.** Instrumento VST3 para Windows 11 x64: navegador móvil reescalable, audio al DAW y chat de la comunidad.
 
@@ -8,13 +8,15 @@
 
 *Interfaz real de 0.4.2, capturada en la aplicación de escritorio que comparte el editor del VST3.*
 
+En 0.4.3 se corrige la regresión de scroll de 0.4.2, comprobada con una prueba que pasa por el manejador nativo de rueda y por las flechas. [Detalles](docs/CORRECCION-SCROLL-0.4.3.md).
+
 En 0.4.2 se estabiliza el ajuste móvil y el scroll de feeds, se protege el reinicio frente al audio y se recupera un renderer caído. Inicio integra el degradado hasta su borde inferior y la desconexión se indica con Wi-Fi y una X. Véase la [auditoría y sus límites](docs/AUDITORIA-0.4.2.md).
 
 ## Instalar
 
 1. Descarga y **extrae el ZIP completo**.
 2. Cierra el DAW y abre **Instalar JOSEADOR.exe**. Acepta el permiso de administrador y pulsa Instalar.
-3. Se instalan JOSEADOR 0.4.2 y BrowserRuntime completos en **C:\Program Files\Common Files\VST3\JOSEADOR.vst3**, para todos los usuarios. No requiere ninguna versión anterior. Si falta Visual C++, se abre el instalador oficial de Microsoft incluido en Prerequisites; completa sus instrucciones.
+3. Se instalan JOSEADOR 0.4.3 y BrowserRuntime completos en **C:\Program Files\Common Files\VST3\JOSEADOR.vst3**, para todos los usuarios. No requiere ninguna versión anterior. Si falta Visual C++, se abre el instalador oficial de Microsoft incluido en Prerequisites; completa sus instrucciones.
 4. En FL Studio, vuelve a escanear los plugins de **C:\Program Files\Common Files\VST3**. Carga **JOSEADOR**, fabricante **PAPIELGUAPO**, como instrumento del Channel Rack.
 
 El EXE necesita los archivos del ZIP junto a él: conserva las carpetas JOSEADOR.vst3 y Prerequisites hasta terminar. También se incluye install.ps1 como alternativa para equipos con el runtime ya instalado. Consulta la guía para la instalación manual. Los respaldos opcionales de una instalación existente se guardan en **%PROGRAMDATA%\JOSEADOR\PreviousVersions**; no se instalan ni se cargan como plugins.

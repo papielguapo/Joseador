@@ -1,3 +1,5 @@
+Validación actual del scroll: [0.4.3](docs/CORRECCION-SCROLL-0.4.3.md).
+
 Validación actual: [auditoría de 0.4.2](docs/AUDITORIA-0.4.2.md).
 
 # Validación de JOSEADOR 0.4.0

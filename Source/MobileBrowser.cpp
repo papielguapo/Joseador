@@ -52,6 +52,7 @@ HWND root=nullptr;
 cef_browser_t* active=nullptr;
 bool closing=false,selfTest=false,homeTest=false;
 bool stressTest=false,crashTest=false,crashIssued=false;
+bool nativeInputTest=false;
 bool returningBack=false;
 std::wstring currentAddress;
 bool historyTest=false,historyOk=true;int historyStep=-1;ULONGLONG historyStarted=0;
@@ -79,6 +80,9 @@ void fitDocument(cef_frame_t*frame){
     String origin(L"https://webcapture.local");
     wchar_t file[32768];GetModuleFileNameW(nullptr,file,32768);std::wstring path=file;path=path.substr(0,path.find_last_of(L"\\/"))+L"\\mobile-input.js";
     std::ifstream stream(path);std::string input((std::istreambuf_iterator<char>(stream)),std::istreambuf_iterator<char>());
+    // This controlled data document has no HTTP origin. Only the self-test
+    // enables its scroll route; production script and scheme checks stay intact.
+    if(nativeInputTest){const std::string guard="if(!/^https?:$/.test(location.protocol))return '';";const auto pos=input.find(guard);if(pos!=std::string::npos)input.erase(pos,guard.size());}
     {std::ifstream fitFile(path.substr(0,path.find_last_of(L"\\/"))+L"\\mobile-fit.js");std::string code((std::istreambuf_iterator<char>(fitFile)),{});if(!code.empty()){String fit(std::wstring(code.begin(),code.end()));frame->execute_java_script(frame,&fit.value,&origin.value,0);}}
     if(!input.empty()){String wheel(std::wstring(input.begin(),input.end()));frame->execute_java_script(frame,&wheel.value,&origin.value,0);}
     path=path.substr(0,path.find_last_of(L"\\/"))+L"\\passwords.js";
@@ -106,7 +110,13 @@ void cancelSwipe(bool send=true){if(swipe.active&&send)touch("touchCancel",0,0);
 LRESULT CALLBACK mouseProc(int code,WPARAM message,LPARAM param){
     if(code==HC_ACTION&&message==WM_MOUSEWHEEL&&active&&!(GetKeyState(VK_CONTROL)&0x8000)&&!(GetKeyState(VK_SHIFT)&0x8000)&&!(GetKeyState(VK_MENU)&0x8000)){
         auto*info=(MOUSEHOOKSTRUCTEX*)param;RECT bounds{};GetClientRect(root,&bounds);POINT point=info->pt;ScreenToClient(root,&point);
-        if(PtInRect(&bounds,point)){const int delta=(short)HIWORD(info->mouseData);if(delta)inputGate.record(0,delta<0?1:-1,GetTickCount64());}
+        if(PtInRect(&bounds,point)){static int amount=0;const int delta=(short)HIWORD(info->mouseData);if(delta)inputGate.record(0,delta<0?1:-1,GetTickCount64());
+            // Mobile emulation does not reliably deliver DOM wheel events.
+            // The renderer reports whether the current pointer is over a feed
+            // or a nested editor/comment scroller; native input drives gestures.
+            if(!wheelMode)return CallNextHookEx(mouseHook,code,message,param);
+            if((amount>0)!=(delta>0))amount=0;amount+=delta;
+            if(std::abs(amount)>=35){wheelGesture(wheelMode==2,amount<0?1:-1,false,wheelMode==3);amount=0;inputGate.consume();}return 1;}
     }
     return CallNextHookEx(mouseHook,code,message,param);
 }
@@ -145,14 +155,15 @@ LRESULT CALLBACK windowProc(HWND hwnd,UINT message,WPARAM wp,LPARAM lp){
             ++historyStep;
         }
         if(selfTest&&!homeTest&&!crashTest&&testStarted){const auto elapsed=GetTickCount64()-testStarted;
-            if(stressTest){if(testStep<60&&elapsed>250+testStep*720){wheelGesture(false,testStep%2?-1:1);++testStep;}}
+            if(nativeInputTest){if(testStep<4&&elapsed>250+testStep*900){const int direction=testStep%2?-1:1;if(testStep<2){MOUSEHOOKSTRUCTEX event{};event.pt={width/2,height/2};ClientToScreen(root,&event.pt);event.mouseData=MAKEWPARAM(0,direction>0?-120:120);mouseProc(HC_ACTION,WM_MOUSEWHEEL,(LPARAM)&event);}else{inputGate.record(1,direction,GetTickCount64());const std::string key=direction>0?"ArrowDown":"ArrowUp";protocol("Input.dispatchKeyEvent","{\"type\":\"keyDown\",\"key\":\""+key+"\",\"code\":\""+key+"\",\"windowsVirtualKeyCode\":"+std::to_string(direction>0?40:38)+"}");protocol("Input.dispatchKeyEvent","{\"type\":\"keyUp\",\"key\":\""+key+"\",\"code\":\""+key+"\"}");}++testStep;}}
+            else if(stressTest){if(testStep<60&&elapsed>250+testStep*720){wheelGesture(false,testStep%2?-1:1);++testStep;}}
             else if(testStep==0&&elapsed>250){wheelGesture(false,1);++testStep;}
             else if(testStep==1&&elapsed>1150){wheelGesture(false,-1);++testStep;}}
         if(shared->quit&&!closing){closing=true;closeBrowser();}
         if(active&&!closing&&WaitForSingleObject(navigationMutex,0)==WAIT_OBJECT_0){NavigationRequest request;const bool loadingReload=shared->navigation.nextAction()==6&&active->is_loading(active);if(loadingReload&&!reloadWaitStarted)reloadWaitStarted=GetTickCount64();if(!loadingReload||GetTickCount64()-reloadWaitStarted>=500){shared->navigation.pop(request);reloadWaitStarted=0;}const auto action=request.action;std::wstring address=request.address;ReleaseMutex(navigationMutex);
             if(action==1){returningBack=false;navigate(address);}else if(action==2)backOrHome();else if(action==3){cancelSwipe();recoverAt=0;active->go_forward(active);}
             else if(action==6){cancelSwipe();recoverAt=0;returningBack=false;active->reload(active);}
-            else if(action==4||action==5){auto*host=active->get_host(active);cef_mouse_event_t event{};event.x=width/2;event.y=height/2;inputGate.record(0,action==4?1:-1,GetTickCount64());host->send_mouse_wheel_event(host,&event,0,action==4?-120:120);release(host);}}
+            else if(action==4||action==5){if(wheelMode){wheelGesture(wheelMode==2,action==4?1:-1,false,wheelMode==3);}else{auto*host=active->get_host(active);cef_mouse_event_t event{};event.x=width/2;event.y=height/2;host->send_mouse_wheel_event(host,&event,0,action==4?-120:120);release(host);}}}
         return 0;}
     if(message==WM_CLOSE){if(closing)DestroyWindow(hwnd);else{closing=true;closeBrowser();}return 0;}
     return DefWindowProc(hwnd,message,wp,lp);
@@ -168,6 +179,7 @@ int run(HINSTANCE instance,void* sandbox){
     navigationMutex=OpenMutexW(SYNCHRONIZE|MUTEX_MODIFY_STATE,FALSE,(name+L"-ui").c_str());if(!navigationMutex)return 33;
     reloadTest=std::wstring(GetCommandLineW()).find(L"--reload-test")!=std::wstring::npos;if(reloadTest)homeTest=true;
     stressTest=selfTest&&std::wstring(GetCommandLineW()).find(L"--joseador-stress-test")!=std::wstring::npos;crashTest=selfTest&&std::wstring(GetCommandLineW()).find(L"--joseador-recovery-test")!=std::wstring::npos;
+    nativeInputTest=selfTest&&std::wstring(GetCommandLineW()).find(L"--joseador-native-input-test")!=std::wstring::npos;
     if(!sandbox){shared->fault=1;return 34;}
     cef_settings_t settings{};settings.size=sizeof(settings);settings.log_severity=LOGSEVERITY_DISABLE;
     wchar_t local[MAX_PATH];GetEnvironmentVariableW(L"LOCALAPPDATA",local,MAX_PATH);
@@ -209,7 +221,8 @@ int run(HINSTANCE instance,void* sandbox){
             frame->execute_java_script(frame,&persistence.value,&origin.value,0);
         }
         String check(L"setTimeout(()=>console.debug('WEBCAPTURE_FIT:'+((document.documentElement.scrollHeight<=innerHeight+2&&document.documentElement.scrollWidth<=innerWidth+2)?'yes':'no')),300)");frame->execute_java_script(frame,&check.value,&origin.value,0);
-        if(stressTest){String fixture(L"document.body.style='margin:0;height:100vh;touch-action:none';let starts=0,ends=0,moves=0,active=0,valid=true;addEventListener('touchstart',e=>{starts++;active++;valid=valid&&e.isTrusted&&active===1;},{passive:false});addEventListener('touchmove',e=>{e.preventDefault();moves++;valid=valid&&e.isTrusted;},{passive:false});addEventListener('touchend',e=>{ends++;active--;valid=valid&&e.isTrusted;const n=document.createElement('div');n.textContent='Reel '+ends;document.body.replaceChildren(n);},{passive:false});setTimeout(()=>console.debug('WEBCAPTURE_STRESS:'+((valid&&starts===60&&ends===60&&moves>300&&active===0)?'yes':'no')),44200);");frame->execute_java_script(frame,&fixture.value,&origin.value,0);testStarted=GetTickCount64();}
+        if(nativeInputTest){String fixture(L"document.body.style='margin:0;height:100vh;touch-action:none';let starts=[],moves=0,trusted=true;addEventListener('touchstart',e=>{starts.push([e.touches[0].clientY,0]);trusted=trusted&&e.isTrusted;},{passive:false});addEventListener('touchmove',e=>{e.preventDefault();moves++;starts[starts.length-1][1]=e.touches[0].clientY;trusted=trusted&&e.isTrusted;},{passive:false});setTimeout(()=>console.debug('WEBCAPTURE_NATIVE_INPUT:'+((trusted&&moves>8&&starts.length===4&&starts.every((s,i)=>i%2?s[1]>s[0]+30:s[1]<s[0]-30))?'yes':'no')),3550);");frame->execute_java_script(frame,&fixture.value,&origin.value,0);testStarted=GetTickCount64();}
+        else if(stressTest){String fixture(L"document.body.style='margin:0;height:100vh;touch-action:none';let starts=0,ends=0,moves=0,active=0,valid=true;addEventListener('touchstart',e=>{starts++;active++;valid=valid&&e.isTrusted&&active===1;},{passive:false});addEventListener('touchmove',e=>{e.preventDefault();moves++;valid=valid&&e.isTrusted;},{passive:false});addEventListener('touchend',e=>{ends++;active--;valid=valid&&e.isTrusted;const n=document.createElement('div');n.textContent='Reel '+ends;document.body.replaceChildren(n);},{passive:false});setTimeout(()=>console.debug('WEBCAPTURE_STRESS:'+((valid&&starts===60&&ends===60&&moves>300&&active===0)?'yes':'no')),44200);");frame->execute_java_script(frame,&fixture.value,&origin.value,0);testStarted=GetTickCount64();}
         else if(!homeTest&&!crashTest){String fixture(L"document.body.style='margin:0;height:100vh;touch-action:none';let starts=[],moves=0,trusted=true;addEventListener('touchstart',e=>{starts.push([e.touches[0].clientY,0]);trusted=trusted&&e.isTrusted;},{passive:false});addEventListener('touchmove',e=>{e.preventDefault();moves++;starts[starts.length-1][1]=e.touches[0].clientY;trusted=trusted&&e.isTrusted;},{passive:false});setTimeout(()=>console.debug('WEBCAPTURE_TOUCH:'+((trusted&&moves>4&&starts.length===2&&starts[0][1]<starts[0][0]-30&&starts[1][1]>starts[1][0]+30)?'yes':'no')),1600);");frame->execute_java_script(frame,&fixture.value,&origin.value,0);testStarted=GetTickCount64();}
         if(crashTest&&!crashIssued)testStarted=GetTickCount64();
         if(crashTest&&crashIssued){String result(L"console.debug('WEBCAPTURE_RECOVERY:yes')");frame->execute_java_script(frame,&result.value,&origin.value,0);}
@@ -230,7 +243,7 @@ int run(HINSTANCE instance,void* sandbox){
         if(command.size()==14&&command.rfind(L"__WC_MEDIA__:",0)==0&&command.back()>=L'1'&&command.back()<=L'4'){const auto fault=shared->fault.load();if(fault&&fault!=4)return 1;shared->fault=4;if(WaitForSingleObject(navigationMutex,0)==WAIT_OBJECT_0){const auto text=L"Error de video "+command.substr(13)+L" (1: cancelado, 2: red, 3: decodificacion, 4: formato). Pulsa Actualizar.";wcsncpy_s(shared->error,text.c_str(),_TRUNCATE);ReleaseMutex(navigationMutex);}return 1;}
         if(command.rfind(L"__PTG_READ__:",0)==0){chatRead.accept(passwords::origin(currentAddress),command,root&&IsWindowVisible(root)&&!IsIconic(GetAncestor(root,GA_ROOT)));return 1;}
         if(command==L"__WC_MODE__:reels"||command==L"__WC_MODE__:stories"||command==L"__WC_MODE__:scroll"||command==L"__WC_MODE__:normal"){wheelMode=command==L"__WC_MODE__:reels"?1:(command==L"__WC_MODE__:stories"?2:(command==L"__WC_MODE__:scroll"?3:0));return 1;}
-        if(selfTest&&(command.rfind(L"WEBCAPTURE_STRESS:",0)==0||command.rfind(L"WEBCAPTURE_RECOVERY:",0)==0||command.rfind(L"WEBCAPTURE_FIT:",0)==0||command.rfind(L"WEBCAPTURE_TOUCH:",0)==0||command.rfind(L"WEBCAPTURE_PERSIST:",0)==0||command.rfind(L"WEBCAPTURE_RELOAD:",0)==0)&&WaitForSingleObject(navigationMutex,100)==WAIT_OBJECT_0){if(wcslen(shared->error)+command.size()+4<std::size(shared->error))wcscat_s(shared->error,(L" | "+command).c_str());ReleaseMutex(navigationMutex);return 1;}
+        if(selfTest&&(command.rfind(L"WEBCAPTURE_NATIVE_INPUT:",0)==0||command.rfind(L"WEBCAPTURE_STRESS:",0)==0||command.rfind(L"WEBCAPTURE_RECOVERY:",0)==0||command.rfind(L"WEBCAPTURE_FIT:",0)==0||command.rfind(L"WEBCAPTURE_TOUCH:",0)==0||command.rfind(L"WEBCAPTURE_PERSIST:",0)==0||command.rfind(L"WEBCAPTURE_RELOAD:",0)==0)&&WaitForSingleObject(navigationMutex,100)==WAIT_OBJECT_0){if(wcslen(shared->error)+command.size()+4<std::size(shared->error))wcscat_s(shared->error,(L" | "+command).c_str());ReleaseMutex(navigationMutex);return 1;}
         if(command==L"__WC_WHEEL__:reels:1"||command==L"__WC_WHEEL__:reels:-1"||command==L"__WC_WHEEL__:stories:1"||command==L"__WC_WHEEL__:stories:-1"||command==L"__WC_WHEEL__:scroll:1"||command==L"__WC_WHEEL__:scroll:-1"||command==L"__WC_WHEEL__:horizontal:1"||command==L"__WC_WHEEL__:horizontal:-1"){
             const bool stories=command.find(L":stories:")!=std::wstring::npos,horizontal=command.find(L":horizontal:")!=std::wstring::npos;const int direction=command[command.size()-2]==L'-'?-1:1;
             if(inputGate.accept(horizontal,stories,direction,GetTickCount64()))wheelGesture(stories,direction,horizontal,command.find(L":scroll:")!=std::wstring::npos);return 1;

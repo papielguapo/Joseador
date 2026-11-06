@@ -1,7 +1,7 @@
 (()=>{
  if(window.__wcWheelInstalled)return;
  window.__wcWheelInstalled=true;
- let accumulated=0,last=-1000,reported="",hover=null;
+ let accumulated=0,last=-1000,reported="",hover=null,pointerX=-1,pointerY=-1;
  // Keep only numeric diagnostics for a visible failed video; never its URL.
  addEventListener('error',e=>{const v=e.target;if(v?.tagName!=='VIDEO'||!v.error)return;const r=v.getBoundingClientRect();if(r.width>0&&r.height>0&&r.bottom>0&&r.top<innerHeight)console.debug('__WC_MEDIA__:'+v.error.code);},{capture:true});
  addEventListener('playing',e=>{if(e.target?.tagName==='VIDEO')console.debug('__WC_MEDIA__:ok');},{capture:true});
@@ -27,8 +27,9 @@
      }
    }return false;
  };
- const report=()=>{const value=blocked(hover)?'normal':(mode()||'normal');if(value!==reported){reported=value;console.debug('__WC_MODE__:'+value);}};
- addEventListener('pointermove',e=>{hover=e.target;report();},{passive:true,capture:true});
+ const report=()=>{const target=pointerX>=0&&pointerY>=0?document.elementFromPoint?.(pointerX,pointerY)||hover:hover;const value=blocked(target)?'normal':(mode()||'normal');if(value!==reported){reported=value;console.debug('__WC_MODE__:'+value);}};
+ const point=e=>{hover=e.target;pointerX=e.clientX??-1;pointerY=e.clientY??-1;report();};
+ addEventListener('pointermove',point,{passive:true,capture:true});addEventListener('pointerdown',point,{passive:true,capture:true});
  addEventListener('popstate',report);addEventListener('hashchange',report);setInterval(report,500);report();
  addEventListener('keydown',e=>{
    if(!e.isTrusted||e.ctrlKey||e.altKey||e.metaKey||e.shiftKey||blocked(e.target))return;
