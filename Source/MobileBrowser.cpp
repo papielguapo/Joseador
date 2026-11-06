@@ -5,12 +5,14 @@
 #include "include/capi/cef_devtools_message_observer_capi.h"
 #include "include/capi/cef_jsdialog_handler_capi.h"
 #include "include/capi/cef_request_handler_capi.h"
+#include "include/capi/cef_resource_request_handler_capi.h"
 #include "include/capi/cef_parser_capi.h"
 #include "PasswordStore.h"
 #include "NavigationPolicy.h"
 #include "InputGate.h"
 #include "ChatState.h"
 #include "RecoveryPolicy.h"
+#include "WebProfile.h"
 #include "include/cef_sandbox_win.h"
 #include "include/cef_api_hash.h"
 #include <shellapi.h>
@@ -42,8 +44,13 @@ Ref<cef_load_handler_t>* loadHandler=nullptr;
 Ref<cef_display_handler_t>* displayHandler=nullptr;
 Ref<cef_jsdialog_handler_t>* dialogHandler=nullptr;
 Ref<cef_request_handler_t>* requestHandler=nullptr;
+Ref<cef_resource_request_handler_t>* resourceHandler=nullptr;
 RecoveryPolicy recovery;
 ULONGLONG recoverAt=0;
+bool profileApplied=false,tiktokProfile=false,profileReady=false;
+int profileRequest=0;
+ULONGLONG profileDeadline=0;
+std::wstring pendingAddress;
 HANDLE profileMutex=nullptr;
 parttimegang::ReadState chatRead;
 ULONGLONG testStarted=0;int testStep=0;
@@ -52,7 +59,8 @@ HWND root=nullptr;
 cef_browser_t* active=nullptr;
 bool closing=false,selfTest=false,homeTest=false;
 bool stressTest=false,crashTest=false,crashIssued=false;
-bool nativeInputTest=false;
+bool nativeInputTest=false,webOnlyTest=false;
+int blockedAppNavigations=0;
 bool nativeModeReset=false;
 bool returningBack=false;
 std::wstring currentAddress;
@@ -109,7 +117,7 @@ void updateSwipe(){if(!swipe.active)return;const double t=(GetTickCount64()-swip
 }
 void cancelSwipe(bool send=true){if(swipe.active&&send)touch("touchCancel",0,0);swipe.active=false;inputGate.consume();wheelMode=0;}
 LRESULT CALLBACK mouseProc(int code,WPARAM message,LPARAM param){
-    if(code==HC_ACTION&&message==WM_MOUSEWHEEL&&active&&!(GetKeyState(VK_CONTROL)&0x8000)&&!(GetKeyState(VK_SHIFT)&0x8000)&&!(GetKeyState(VK_MENU)&0x8000)){
+    if(code==HC_ACTION&&message==WM_MOUSEWHEEL&&active&&(nativeInputTest||(!(GetKeyState(VK_CONTROL)&0x8000)&&!(GetKeyState(VK_SHIFT)&0x8000)&&!(GetKeyState(VK_MENU)&0x8000)))){
         auto*info=(MOUSEHOOKSTRUCTEX*)param;RECT bounds{};GetClientRect(root,&bounds);POINT point=info->pt;ScreenToClient(root,&point);
         if(PtInRect(&bounds,point)){static int amount=0;const int delta=(short)HIWORD(info->mouseData);if(delta)inputGate.record(0,delta<0?1:-1,GetTickCount64());
             // Mobile emulation does not reliably deliver DOM wheel events.
@@ -127,10 +135,16 @@ LRESULT CALLBACK keyboardProc(int code,WPARAM key,LPARAM details){
         else if(key==VK_LEFT||key==VK_RIGHT)inputGate.record(2,key==VK_RIGHT?1:-1,GetTickCount64());
     }}return CallNextHookEx(keyboardHook,code,key,details);
 }
+void loadAddress(const std::wstring& address){if(!active||address.empty())return;auto*f=active->get_main_frame(active);String s(address);f->load_url(f,&s.value);release(f);}
+void queueProfile(const std::wstring& target,bool compat){profileApplied=true;tiktokProfile=compat;profileReady=false;pendingAddress=target;profileDeadline=GetTickCount64()+500;profileRequest=protocolId+1;protocol("Emulation.setUserAgentOverride",webprofile::parameters(compat));}
 void navigate(const std::wstring& address){if(active&&navigation::allowed(address)){auto target=address;
+    if(navigation::appRedirect(target,currentAddress)){if(navigation::menuSite(currentAddress))return;target=navigation::tiktokAppLink(target)?L"https://www.tiktok.com/foryou":L"webcapture://home";}
+    pendingAddress.clear();
     cancelSwipe();recoverAt=0;
     if(target==L"webcapture://home"){wchar_t path[32768];GetModuleFileNameW(nullptr,path,32768);target=std::wstring(path);target=target.substr(0,target.find_last_of(L"\\/"))+L"\\start.html";for(auto&c:target)if(c==L'\\')c=L'/';target=L"file:///"+target;}
-    auto*f=active->get_main_frame(active);String s(target);f->load_url(f,&s.value);release(f);}}
+    const bool compat=navigation::tiktok(target);
+    if(!profileApplied||compat!=tiktokProfile){queueProfile(target,compat);return;}
+    pendingAddress.clear();loadAddress(target);}}
 bool isHome(const std::wstring& address){return address==L"webcapture://home"||(address.rfind(L"file:///",0)==0&&address.size()>=11&&address.substr(address.size()-11)==L"/start.html");}
 void backOrHome(){
     if(!active)return;
@@ -139,11 +153,12 @@ void backOrHome(){
     if(isHome(currentAddress))return;
     if(active->can_go_back(active)){returningBack=true;active->go_back(active);}else navigate(L"webcapture://home");
 }
-void closeBrowser(){cancelSwipe();recoverAt=0;if(active){auto*h=active->get_host(active);h->close_browser(h,1);release(h);}else cef_quit_message_loop();}
+void closeBrowser(){cancelSwipe();recoverAt=0;pendingAddress.clear();if(active){auto*h=active->get_host(active);h->close_browser(h,1);release(h);}else cef_quit_message_loop();}
 LRESULT CALLBACK windowProc(HWND hwnd,UINT message,WPARAM wp,LPARAM lp){
     if(message==WM_SIZE){const int nextWidth=LOWORD(lp),nextHeight=HIWORD(lp);if(nextWidth==width&&nextHeight==height)return 0;cancelSwipe();width=nextWidth;height=nextHeight;if(active&&width>0&&height>0){auto*h=active->get_host(active);SetWindowPos(h->get_window_handle(h),nullptr,0,0,width,height,SWP_NOZORDER|SWP_NOACTIVATE);release(h);mobileMetrics();}return 0;}
     if(message==WM_TIMER){shared->heartbeat=GetTickCount64();
         updateSwipe();
+        if(!pendingAddress.empty()&&active&&!closing&&(profileReady||GetTickCount64()>=profileDeadline)){auto address=std::move(pendingAddress);pendingAddress.clear();profileReady=false;loadAddress(address);}
         if(crashTest&&testStarted&&!crashIssued&&GetTickCount64()-testStarted>700){crashIssued=true;protocol("Page.crash","{}");}
         if(recoverAt&&active&&!closing&&GetTickCount64()>=recoverAt){recoverAt=0;active->reload(active);}
         if(reloadTest&&reloadLoads==1&&!reloadIssued&&GetTickCount64()-reloadStarted>500&&WaitForSingleObject(navigationMutex,0)==WAIT_OBJECT_0){shared->navigation.push(6);reloadIssued=true;ReleaseMutex(navigationMutex);}
@@ -162,7 +177,7 @@ LRESULT CALLBACK windowProc(HWND hwnd,UINT message,WPARAM wp,LPARAM lp){
             else if(testStep==0&&elapsed>250){wheelGesture(false,1);++testStep;}
             else if(testStep==1&&elapsed>1150){wheelGesture(false,-1);++testStep;}}
         if(shared->quit&&!closing){closing=true;closeBrowser();}
-        if(active&&!closing&&WaitForSingleObject(navigationMutex,0)==WAIT_OBJECT_0){NavigationRequest request;const bool loadingReload=shared->navigation.nextAction()==6&&active->is_loading(active);if(loadingReload&&!reloadWaitStarted)reloadWaitStarted=GetTickCount64();if(!loadingReload||GetTickCount64()-reloadWaitStarted>=500){shared->navigation.pop(request);reloadWaitStarted=0;}const auto action=request.action;std::wstring address=request.address;ReleaseMutex(navigationMutex);
+        if(active&&!closing&&pendingAddress.empty()&&WaitForSingleObject(navigationMutex,0)==WAIT_OBJECT_0){NavigationRequest request;const bool loadingReload=shared->navigation.nextAction()==6&&active->is_loading(active);if(loadingReload&&!reloadWaitStarted)reloadWaitStarted=GetTickCount64();if(!loadingReload||GetTickCount64()-reloadWaitStarted>=500){shared->navigation.pop(request);reloadWaitStarted=0;}const auto action=request.action;std::wstring address=request.address;ReleaseMutex(navigationMutex);
             if(action==1){returningBack=false;navigate(address);}else if(action==2)backOrHome();else if(action==3){cancelSwipe();recoverAt=0;active->go_forward(active);}
             else if(action==6){cancelSwipe();recoverAt=0;returningBack=false;active->reload(active);}
             else if(action==4||action==5){if(wheelMode){wheelGesture(wheelMode==2,action==4?1:-1,false,wheelMode==3);}else{auto*host=active->get_host(active);cef_mouse_event_t event{};event.x=width/2;event.y=height/2;host->send_mouse_wheel_event(host,&event,0,action==4?-120:120);release(host);}}}
@@ -181,6 +196,7 @@ int run(HINSTANCE instance,void* sandbox){
     navigationMutex=OpenMutexW(SYNCHRONIZE|MUTEX_MODIFY_STATE,FALSE,(name+L"-ui").c_str());if(!navigationMutex)return 33;
     reloadTest=std::wstring(GetCommandLineW()).find(L"--reload-test")!=std::wstring::npos;if(reloadTest)homeTest=true;
     stressTest=selfTest&&std::wstring(GetCommandLineW()).find(L"--joseador-stress-test")!=std::wstring::npos;crashTest=selfTest&&std::wstring(GetCommandLineW()).find(L"--joseador-recovery-test")!=std::wstring::npos;
+    webOnlyTest=selfTest&&std::wstring(GetCommandLineW()).find(L"--joseador-web-only-test")!=std::wstring::npos;if(webOnlyTest)homeTest=true;
     nativeInputTest=selfTest&&std::wstring(GetCommandLineW()).find(L"--joseador-native-input-test")!=std::wstring::npos;
     if(!sandbox){shared->fault=1;return 34;}
     cef_settings_t settings{};settings.size=sizeof(settings);settings.log_severity=LOGSEVERITY_DISABLE;
@@ -214,6 +230,9 @@ int run(HINSTANCE instance,void* sandbox){
     load->api.on_load_end=[](cef_load_handler_t*,cef_browser_t*,cef_frame_t*frame,int httpStatus){if(frame->is_main(frame)){if((httpStatus>=200&&httpStatus<400||isHome(currentAddress)||(selfTest&&httpStatus==0))&&(shared->fault==2||shared->fault==3)){shared->fault=0;if(WaitForSingleObject(navigationMutex,0)==WAIT_OBJECT_0){shared->error[0]=0;ReleaseMutex(navigationMutex);}}mobileMetrics();fitDocument(frame);if(selfTest){
         String js(L"window.a=new AudioContext();window.o=a.createOscillator();window.g=a.createGain();g.gain.value=0.18;o.frequency.value=440;o.connect(g);g.connect(a.destination);o.start();a.resume();console.log('WEBCAPTURE_CODECS:'+document.createElement('video').canPlayType('video/mp4; codecs=\"avc1.42E01E, mp4a.40.2\"')+' | APPS:'+document.querySelectorAll('main a').length+' | WIDTH:'+innerWidth);"),origin(L"https://webcapture.test");
         frame->execute_java_script(frame,&js.value,&origin.value,0);
+        if(webOnlyTest){auto*u=frame->get_url(frame);std::wstring page;if(u){page.assign((wchar_t*)u->str,u->length);cef_string_userfree_utf16_free(u);}if(page.find(L"JOSEADOR_WebOnlyTest")!=std::wstring::npos){
+            String fixture(L"console.debug('WEBCAPTURE_WEB_PROFILE:'+((navigator.userAgent.includes('Windows NT')&&navigator.platform==='Win32'&&navigator.maxTouchPoints>0&&innerWidth<500)?'yes':'no'));setTimeout(()=>location.href='intent://aweme/detail/123#Intent;scheme=joseador-test;end',400);setTimeout(()=>location.href='snssdk1233://aweme/detail/123',800);setTimeout(()=>location.href='joseador-test://video/123',1200);setTimeout(()=>{let f=document.createElement('iframe');f.src='joseador-test://frame';f.style.display='none';document.body.append(f)},1600);setTimeout(()=>console.debug('WEBCAPTURE_WEB_ONLY:'+(location.href.includes('JOSEADOR_WebOnlyTest')?'yes':'no')),2400);");frame->execute_java_script(frame,&fixture.value,&origin.value,0);
+        }}
         if(reloadTest&&isHome(currentAddress)){++reloadLoads;if(reloadLoads==1)reloadStarted=GetTickCount64();else if(reloadLoads==2){String result(L"console.debug('WEBCAPTURE_RELOAD:yes');");frame->execute_java_script(frame,&result.value,&origin.value,0);}}
         if(historyTest&&historyStep<0){auto*u=frame->get_url(frame);std::wstring page;if(u){page.assign((wchar_t*)u->str,u->length);cef_string_userfree_utf16_free(u);}if(isHome(page)){
             historyStep=0;historyStarted=GetTickCount64();protocol("Runtime.evaluate","{\"expression\":\"history.pushState({},'' , '#one');history.pushState({},'' , '#two');\",\"userGesture\":true}");
@@ -223,7 +242,7 @@ int run(HINSTANCE instance,void* sandbox){
             frame->execute_java_script(frame,&persistence.value,&origin.value,0);
         }
         String check(L"setTimeout(()=>console.debug('WEBCAPTURE_FIT:'+((document.documentElement.scrollHeight<=innerHeight+2&&document.documentElement.scrollWidth<=innerWidth+2)?'yes':'no')),300)");frame->execute_java_script(frame,&check.value,&origin.value,0);
-        if(nativeInputTest){String fixture(L"document.body.style='margin:0;height:100vh;touch-action:none';let starts=[],moves=0,trusted=true;addEventListener('touchstart',e=>{starts.push([e.touches[0].clientY,0]);trusted=trusted&&e.isTrusted;},{passive:false});addEventListener('touchmove',e=>{e.preventDefault();moves++;starts[starts.length-1][1]=e.touches[0].clientY;trusted=trusted&&e.isTrusted;},{passive:false});setTimeout(()=>console.debug('WEBCAPTURE_NATIVE_INPUT:'+((trusted&&moves>8&&starts.length===4&&starts.every((s,i)=>i%2?s[1]>s[0]+30:s[1]<s[0]-30))?'yes':'no')),3550);");frame->execute_java_script(frame,&fixture.value,&origin.value,0);testStarted=GetTickCount64();}
+        if(nativeInputTest){String fixture(L"document.body.style='margin:0;height:100vh;touch-action:none';let starts=[],moves=0,trusted=true;addEventListener('touchstart',e=>{starts.push([e.touches[0].clientY,0]);trusted=trusted&&e.isTrusted;},{passive:false});addEventListener('touchmove',e=>{e.preventDefault();moves++;starts[starts.length-1][1]=e.touches[0].clientY;trusted=trusted&&e.isTrusted;},{passive:false});setTimeout(()=>console.debug('WEBCAPTURE_NATIVE_INPUT:'+((trusted&&moves>8&&starts.length===4&&starts.every((s,i)=>i%2?s[1]>s[0]+30:s[1]<s[0]-30))?'yes':'no')+':'+starts.length+':'+moves),3550);");frame->execute_java_script(frame,&fixture.value,&origin.value,0);testStarted=GetTickCount64();}
         else if(stressTest){String fixture(L"document.body.style='margin:0;height:100vh;touch-action:none';let starts=0,ends=0,moves=0,active=0,valid=true;addEventListener('touchstart',e=>{starts++;active++;valid=valid&&e.isTrusted&&active===1;},{passive:false});addEventListener('touchmove',e=>{e.preventDefault();moves++;valid=valid&&e.isTrusted;},{passive:false});addEventListener('touchend',e=>{ends++;active--;valid=valid&&e.isTrusted;const n=document.createElement('div');n.textContent='Reel '+ends;document.body.replaceChildren(n);},{passive:false});setTimeout(()=>console.debug('WEBCAPTURE_STRESS:'+((valid&&starts===60&&ends===60&&moves>300&&active===0)?'yes':'no')),44200);");frame->execute_java_script(frame,&fixture.value,&origin.value,0);testStarted=GetTickCount64();}
         else if(!homeTest&&!crashTest){String fixture(L"document.body.style='margin:0;height:100vh;touch-action:none';let starts=[],moves=0,trusted=true;addEventListener('touchstart',e=>{starts.push([e.touches[0].clientY,0]);trusted=trusted&&e.isTrusted;},{passive:false});addEventListener('touchmove',e=>{e.preventDefault();moves++;starts[starts.length-1][1]=e.touches[0].clientY;trusted=trusted&&e.isTrusted;},{passive:false});setTimeout(()=>console.debug('WEBCAPTURE_TOUCH:'+((trusted&&moves>4&&starts.length===2&&starts[0][1]<starts[0][0]-30&&starts[1][1]>starts[1][0]+30)?'yes':'no')),1600);");frame->execute_java_script(frame,&fixture.value,&origin.value,0);testStarted=GetTickCount64();}
         if(crashTest&&!crashIssued)testStarted=GetTickCount64();
@@ -231,6 +250,11 @@ int run(HINSTANCE instance,void* sandbox){
         }}};
     auto*display=new Ref<cef_display_handler_t>;
     auto*request=new Ref<cef_request_handler_t>;
+    auto*resource=new Ref<cef_resource_request_handler_t>;
+    resource->api.on_protocol_execution=[](cef_resource_request_handler_t*,cef_browser_t*,cef_frame_t*,cef_request_t*,int*allow){*allow=0;};
+    resourceHandler=resource;
+    request->api.get_resource_request_handler=[](cef_request_handler_t*,cef_browser_t*,cef_frame_t*,cef_request_t*,int,int,const cef_string_t*,int*){return resourceHandler->retain();};
+    request->api.on_before_browse=[](cef_request_handler_t*,cef_browser_t*,cef_frame_t*frame,cef_request_t*req,int,int)->int{auto*u=req->get_url(req);if(!u)return 1;const std::wstring address((wchar_t*)u->str,u->length);cef_string_userfree_utf16_free(u);if(!navigation::browserScheme(address)||navigation::appRedirect(address,currentAddress)){++blockedAppNavigations;return 1;}if(!frame->is_main(frame))return 0;const bool compat=navigation::tiktok(address);if(!navigation::host(address).empty()&&(!profileApplied||compat!=tiktokProfile)){auto*m=req->get_method(req);const bool get=m&&std::wstring((wchar_t*)m->str,m->length)==L"GET";if(m)cef_string_userfree_utf16_free(m);if(!get||(req->get_transition_type(req)&TT_FORWARD_BACK_FLAG)){profileApplied=true;tiktokProfile=compat;protocol("Emulation.setUserAgentOverride",webprofile::parameters(compat));return 0;}queueProfile(address,compat);return 1;}return 0;};
     request->api.on_render_process_terminated=[](cef_request_handler_t*,cef_browser_t*,cef_termination_status_t status,int code,const cef_string_t*){if(closing)return;cancelSwipe(false);shared->streaming=0;shared->fault=2;const auto now=GetTickCount64();const bool retry=recovery.allow(now);recoverAt=retry?now+500:0;if(WaitForSingleObject(navigationMutex,0)==WAIT_OBJECT_0){const auto text=L"La web se cerro ("+std::to_wstring(status)+L"/"+std::to_wstring(code)+(retry?L"). Recuperando...":L"). Pulsa Actualizar.");wcsncpy_s(shared->error,text.c_str(),_TRUNCATE);ReleaseMutex(navigationMutex);}};
     display->api.on_address_change=[](cef_display_handler_t*,cef_browser_t*,cef_frame_t*frame,const cef_string_t* url){
         if(!frame->is_main(frame))return;std::wstring address((wchar_t*)url->str,url->length);currentAddress=address;
@@ -245,7 +269,7 @@ int run(HINSTANCE instance,void* sandbox){
         if(command.size()==14&&command.rfind(L"__WC_MEDIA__:",0)==0&&command.back()>=L'1'&&command.back()<=L'4'){const auto fault=shared->fault.load();if(fault&&fault!=4)return 1;shared->fault=4;if(WaitForSingleObject(navigationMutex,0)==WAIT_OBJECT_0){const auto text=L"Error de video "+command.substr(13)+L" (1: cancelado, 2: red, 3: decodificacion, 4: formato). Pulsa Actualizar.";wcsncpy_s(shared->error,text.c_str(),_TRUNCATE);ReleaseMutex(navigationMutex);}return 1;}
         if(command.rfind(L"__PTG_READ__:",0)==0){chatRead.accept(passwords::origin(currentAddress),command,root&&IsWindowVisible(root)&&!IsIconic(GetAncestor(root,GA_ROOT)));return 1;}
         if(command==L"__WC_MODE__:reels"||command==L"__WC_MODE__:stories"||command==L"__WC_MODE__:scroll"||command==L"__WC_MODE__:normal"){wheelMode=command==L"__WC_MODE__:reels"?1:(command==L"__WC_MODE__:stories"?2:(command==L"__WC_MODE__:scroll"?3:0));return 1;}
-        if(selfTest&&(command.rfind(L"WEBCAPTURE_NATIVE_INPUT:",0)==0||command.rfind(L"WEBCAPTURE_STRESS:",0)==0||command.rfind(L"WEBCAPTURE_RECOVERY:",0)==0||command.rfind(L"WEBCAPTURE_FIT:",0)==0||command.rfind(L"WEBCAPTURE_TOUCH:",0)==0||command.rfind(L"WEBCAPTURE_PERSIST:",0)==0||command.rfind(L"WEBCAPTURE_RELOAD:",0)==0)&&WaitForSingleObject(navigationMutex,100)==WAIT_OBJECT_0){if(wcslen(shared->error)+command.size()+4<std::size(shared->error))wcscat_s(shared->error,(L" | "+command).c_str());ReleaseMutex(navigationMutex);return 1;}
+        if(selfTest&&(command.rfind(L"WEBCAPTURE_WEB_PROFILE:",0)==0||command.rfind(L"WEBCAPTURE_WEB_ONLY:",0)==0||command.rfind(L"WEBCAPTURE_NATIVE_INPUT:",0)==0||command.rfind(L"WEBCAPTURE_STRESS:",0)==0||command.rfind(L"WEBCAPTURE_RECOVERY:",0)==0||command.rfind(L"WEBCAPTURE_FIT:",0)==0||command.rfind(L"WEBCAPTURE_TOUCH:",0)==0||command.rfind(L"WEBCAPTURE_PERSIST:",0)==0||command.rfind(L"WEBCAPTURE_RELOAD:",0)==0)&&WaitForSingleObject(navigationMutex,100)==WAIT_OBJECT_0){if(wcslen(shared->error)+command.size()+4<std::size(shared->error))wcscat_s(shared->error,(L" | "+command+(command.rfind(L"WEBCAPTURE_WEB_ONLY:",0)==0?L":blocked="+std::to_wstring(blockedAppNavigations):L"")).c_str());ReleaseMutex(navigationMutex);return 1;}
         if(command==L"__WC_WHEEL__:reels:1"||command==L"__WC_WHEEL__:reels:-1"||command==L"__WC_WHEEL__:stories:1"||command==L"__WC_WHEEL__:stories:-1"||command==L"__WC_WHEEL__:scroll:1"||command==L"__WC_WHEEL__:scroll:-1"||command==L"__WC_WHEEL__:horizontal:1"||command==L"__WC_WHEEL__:horizontal:-1"){
             const bool stories=command.find(L":stories:")!=std::wstring::npos,horizontal=command.find(L":horizontal:")!=std::wstring::npos;const int direction=command[command.size()-2]==L'-'?-1:1;
             if(inputGate.accept(horizontal,stories,direction,GetTickCount64()))wheelGesture(stories,direction,horizontal,command.find(L":scroll:")!=std::wstring::npos);return 1;
@@ -289,11 +313,12 @@ int run(HINSTANCE instance,void* sandbox){
     trace("create browser\n");auto*created=cef_browser_host_create_browser_sync(&info,&client->api,&first.value,&browserSettings,nullptr,nullptr);trace("created browser\n");
     if(!created){shared->fault=1;cef_shutdown();return 36;}release(created);
     auto*observer=new Ref<cef_dev_tools_message_observer_t>;
-    observer->api.on_dev_tools_method_result=[](cef_dev_tools_message_observer_t*,cef_browser_t*,int,int,const void*,size_t){};
+    observer->api.on_dev_tools_method_result=[](cef_dev_tools_message_observer_t*,cef_browser_t*,int id,int,const void*,size_t){if(id==profileRequest)profileReady=true;};
     auto*host=active->get_host(active);auto*registration=host->add_dev_tools_message_observer(host,&observer->api);release(host);
-    if(homeTest)navigate(L"webcapture://home");
+    if(webOnlyTest)queueProfile(L"data:text/html,<html><head><title>JOSEADOR_WebOnlyTest</title></head><body>JOSEADOR_WebOnlyTest</body></html>",true);
+    else if(homeTest)navigate(L"webcapture://home");
     shared->window=(uint64_t)(uintptr_t)root;mouseHook=SetWindowsHookExW(WH_MOUSE,mouseProc,nullptr,GetCurrentThreadId());keyboardHook=SetWindowsHookExW(WH_KEYBOARD,keyboardProc,nullptr,GetCurrentThreadId());SetTimer(root,1,16,nullptr);cef_run_message_loop();if(mouseHook)UnhookWindowsHookEx(mouseHook);if(keyboardHook)UnhookWindowsHookEx(keyboardHook);KillTimer(root,1);DestroyWindow(root);
-    release(registration);observer->release();cef_shutdown();client->release();life->release();audio->release();load->release();display->release();dialog->release();request->release();if(profileMutex){ReleaseMutex(profileMutex);CloseHandle(profileMutex);}CloseHandle(navigationMutex);UnmapViewOfFile(shared);CloseHandle(mapping);return 0;
+    release(registration);observer->release();cef_shutdown();client->release();life->release();audio->release();load->release();display->release();dialog->release();request->release();resource->release();if(profileMutex){ReleaseMutex(profileMutex);CloseHandle(profileMutex);}CloseHandle(navigationMutex);UnmapViewOfFile(shared);CloseHandle(mapping);return 0;
 }
 }
 extern "C" __declspec(dllexport) int RunWinMain(HINSTANCE instance,LPTSTR,int,void*sandbox,cef_version_info_t*){return run(instance,sandbox);}

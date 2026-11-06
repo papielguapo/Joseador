@@ -15,3 +15,11 @@ Se compiló el mismo arnés con el manejador de ratón de 0.4.2: `WEBCAPTURE_NAT
 También pasan las siete suites CTest, los nueve recorridos web y 36 combinaciones de flechas, los casos de comentarios bajo un cursor inmóvil y las pruebas VST3 a 44,1/48/96 kHz. En el ensayo de audio, la salida directa del navegador a Windows tiene RMS cero.
 
 Se mantienen los demás cambios de 0.4.2: Inicio sin franja, Wi-Fi con X, pantalla sin Internet con imagen integrada, retorno a Inicio al reconectar y Enter con inicio/campo vacío. El error de reproducción de algunos vídeos de TikTok sigue separado de esta corrección de entrada.
+
+## Enlaces de aplicación y ERR_UNKNOWN_URL_SCHEME
+
+En la prueba manual anterior de TikTok se capturó `ERR_UNKNOWN_URL_SCHEME` (-302): la web intentaba navegar a `intent://`/`snssdk1233://` a través de un enlace de instalación. No era un fallo de conexión ni del gesto de rueda. La actualización de la barra inferior se instaló antes que esta corrección del motor.
+
+El motor cancela los protocolos que no pertenecen al navegador en todos los marcos y prohíbe su ejecución como aplicación de Windows. Bloquea los puentes de apertura de aplicaciones desde las webs del menú, sin desviar otras apps a TikTok. Para TikTok solicita la web con un perfil de compatibilidad de escritorio; mantiene las métricas móviles, la pantalla estrecha y los eventos táctiles. Las demás webs recuperan el perfil móvil. Los cambios de perfil no reenvían peticiones POST ni cancelan los pasos del historial.
+
+`BridgeProbe --joseador-web-only-test` comprueba en CEF real el perfil de compatibilidad con ancho móvil y soporte táctil. Un documento controlado intenta abrir tres protocolos no web y un cuarto dentro de un marco. Debe conservarse el documento, contabilizarse las cuatro cancelaciones y mantenerse el estado sin errores: `WEB_PROFILE:yes`, `WEB_ONLY:yes:blocked=4`. Es una prueba de ese fallo concreto; no certifica que TikTok permita reproducir todos sus vídeos sin iniciar sesión o usar su app.

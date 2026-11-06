@@ -23,8 +23,9 @@ int wmain(int argc,wchar_t**argv){
  const bool history=argc>2&&std::wstring(argv[2])==L"--history-test";
  const bool reload=argc>2&&std::wstring(argv[2])==L"--reload-test";
  const bool stress=argc>2&&std::wstring(argv[2])==L"--joseador-stress-test",crash=argc>2&&std::wstring(argv[2])==L"--joseador-recovery-test";
+ const bool webOnly=argc>2&&std::wstring(argv[2])==L"--joseador-web-only-test";
  const bool nativeInput=argc>2&&std::wstring(argv[2])==L"--joseador-native-input-test";
- if(persistence||history||reload||stress||crash||nativeInput)command+=L" "+std::wstring(argv[2]);else if(argc>2)command+=L" --home-test";
+ if(persistence||history||reload||stress||crash||nativeInput||webOnly)command+=L" "+std::wstring(argv[2]);else if(argc>2)command+=L" --home-test";
  if(argc>3)command+=L" --small";
  STARTUPINFOW startup{};startup.cb=sizeof(startup);PROCESS_INFORMATION proc{};
  if(!CreateProcessW(nullptr,command.data(),nullptr,nullptr,FALSE,CREATE_NO_WINDOW,nullptr,folder.c_str(),&startup,&proc))return 2;
@@ -41,7 +42,7 @@ int wmain(int argc,wchar_t**argv){
    hr=cb->client->Initialize(AUDCLNT_SHAREMODE_SHARED,AUDCLNT_STREAMFLAGS_LOOPBACK|AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM,0,0,&f,nullptr);
    if(FAILED(hr))result=5;
    else{ComPtr<IAudioCaptureClient>cap;cb->client->GetService(IID_PPV_ARGS(&cap));cb->client->Start();b->read=b->write.load();double e=0,direct=0;uint64_t count=0,dc=0;
-    for(int i=0;i<(stress?4500:crash?700:nativeInput?420:220);++i){Sleep(10);auto r=b->read.load(),w=b->write.load();while(r!=w){const double x=b->audio[(r&(webcapture::capacity-1))*2];e+=x*x;++count;++r;}b->read=r;
+    for(int i=0;i<(stress?4500:crash?700:(nativeInput||webOnly)?420:220);++i){Sleep(10);auto r=b->read.load(),w=b->write.load();while(r!=w){const double x=b->audio[(r&(webcapture::capacity-1))*2];e+=x*x;++count;++r;}b->read=r;
      UINT32 n;while(SUCCEEDED(cap->GetNextPacketSize(&n))&&n){BYTE*data;DWORD flags;cap->GetBuffer(&data,&n,&flags,nullptr,nullptr);if(!(flags&AUDCLNT_BUFFERFLAGS_SILENT))for(UINT32 j=0;j<n*2;++j){const double x=((float*)data)[j];direct+=x*x;}dc+=n*2;cap->ReleaseBuffer(n);}}
     cb->client->Stop();const auto rms=std::sqrt(e/(count?count:1)),physical=std::sqrt(direct/(dc?dc:1));
     std::cout<<"Bridge RMS="<<rms<<" frames="<<count<<" rate="<<b->audioRate<<"; physical browser RMS="<<physical<<" frames="<<dc<<"\n";
@@ -53,6 +54,7 @@ int wmain(int argc,wchar_t**argv){
     if(reload&&!wcsstr(b->error,L"RELOAD:yes"))result=11;
     if(stress&&!wcsstr(b->error,L"STRESS:yes"))result=12;
     if(crash&&(!wcsstr(b->error,L"RECOVERY:yes")||b->fault.load()!=0))result=13;
+    if(webOnly&&(!wcsstr(b->error,L"WEB_PROFILE:yes")||!wcsstr(b->error,L"WEB_ONLY:yes:blocked=4")||b->fault.load()!=0))result=15;
     if(nativeInput&&!wcsstr(b->error,L"NATIVE_INPUT:yes"))result=14;
    }
   }

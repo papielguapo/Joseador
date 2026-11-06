@@ -4,6 +4,14 @@
 #include <initializer_list>
 namespace navigation {
 inline std::wstring lower(std::wstring value){for(auto&c:value)c=(wchar_t)towlower(c);return value;}
+inline std::wstring host(const std::wstring& address){const auto value=lower(address);const auto start=value.rfind(L"https://",0)==0?8:value.rfind(L"http://",0)==0?7:0;if(!start)return{};const auto end=value.find_first_of(L"/?#",start);auto authority=value.substr(start,end==std::wstring::npos?end:end-start);if(authority.find(L'@')!=std::wstring::npos)return{};return authority.substr(0,authority.find(L':'));}
+inline bool domain(const std::wstring& value,const std::wstring& parent){return value==parent||(value.size()>parent.size()&&value.compare(value.size()-parent.size()-1,parent.size()+1,L"."+parent)==0);}
+inline bool tiktok(const std::wstring& address){return domain(host(address),L"tiktok.com");}
+inline bool menuSite(const std::wstring& address){const auto h=host(address);for(const auto*site:{L"youtube.com",L"youtu.be",L"tiktok.com",L"instagram.com",L"facebook.com",L"fb.com",L"x.com",L"twitter.com",L"reddit.com",L"twitch.tv",L"soundcloud.com",L"spotify.com",L"google.com",L"gmail.com",L"part-time-gang.tangycondor.chatgpt.site"})if(domain(h,site))return true;return false;}
+inline bool appBridge(const std::wstring& address){const auto h=host(address);return domain(h,L"onelink.me")||domain(h,L"app.link")||domain(h,L"page.link");}
+inline bool tiktokAppLink(const std::wstring& target){const auto h=host(target);return h==L"snssdk1233.onelink.me"||h==L"snssdk1180.onelink.me"||h==L"tiktok.onelink.me";}
+inline bool appRedirect(const std::wstring& target,const std::wstring& current){return tiktokAppLink(target)||(menuSite(current)&&appBridge(target));}
+inline bool browserScheme(const std::wstring& address){const auto value=lower(address);const auto scheme=value.substr(0,value.find(L':'));return scheme==L"http"||scheme==L"https"||scheme==L"file"||scheme==L"data"||scheme==L"blob"||value==L"about:blank"||value==L"about:srcdoc"||value.rfind(L"about:blank#",0)==0;}
 inline bool allowed(const std::wstring& address){
     if(address==L"webcapture://home")return true;
     if(address.size()>2047)return false;
@@ -21,6 +29,8 @@ inline bool sensitive(std::wstring key){
     return false;
 }
 inline std::wstring projectAddress(const std::wstring& address){
+    if(tiktokAppLink(address))return L"https://www.tiktok.com/foryou";
+    if(appBridge(address))return L"webcapture://home";
     if(!allowed(address))return L"webcapture://home";
     const auto hash=address.find(L'#'),query=address.find(L'?');const auto end=hash==std::wstring::npos?address.size():hash;
     std::wstring result=address.substr(0,query<end?query:end);
