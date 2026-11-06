@@ -96,8 +96,9 @@ void Editor::paint(juce::Graphics& g){
     g.setColour(juce::Colour(0xff172733));g.fillEllipse((float)getWidth()/2+25,16,9,9);
     g.setColour(juce::Colours::white);g.setFont(13);g.drawText(juce::Time::getCurrentTime().formatted("%H:%M"),17,10,55,23,juce::Justification::centredLeft);
     const float x=(float)getWidth()-91;const int net=pc.network;
-    if(net==2){
+    if(net==2||net==0){
         for(float r:{7.0f,12.0f}){juce::Path arc;arc.addCentredArc(x+9,29,r,r,0,-0.8f,0.8f,true);g.strokePath(arc,juce::PathStrokeType(1.8f));}g.fillEllipse(x+7,27,4,4);
+        if(net==0){g.setColour(juce::Colour(0xff10151e));g.fillEllipse(x+15,22,13,13);g.setColour(juce::Colours::white);g.drawLine(x+18,25,x+24,31,1.7f);g.drawLine(x+24,25,x+18,31,1.7f);}
     }else{g.setFont(11);g.drawText(net==1?"LAN":(net==0?"OFF":"?"),(int)x-2,12,28,20,juce::Justification::centred);}
     const int bat=pc.battery;
     if(bat==-2){g.setFont(12);g.drawText(pc.power==1?"AC":"--",getWidth()-57,12,43,20,juce::Justification::centred);}

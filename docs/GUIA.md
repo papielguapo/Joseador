@@ -1,12 +1,12 @@
 # Guía de JOSEADOR
 
-**Por PAPIELGUAPO · Windows 11 x64 · VST3 · Versión 0.4.1**
+**Por PAPIELGUAPO · Windows 11 x64 · VST3 · Versión 0.4.2**
 
 JOSEADOR abre páginas web en una ventana móvil y entrega su audio al DAW. En FL Studio se carga como instrumento en el Channel Rack.
 
-<img src="images/joseador-040.jpg" alt="Pantalla de inicio real de JOSEADOR, con once accesos y buscador inferior" width="400">
+<img src="images/joseador-042.png" alt="Pantalla de inicio real de JOSEADOR, con once accesos y buscador inferior" width="400">
 
-*Captura real de 0.4.0: icono PT, contador de mensajes y botón Actualizar página. La aplicación de escritorio comparte el editor del VST3.*
+*Captura real de 0.4.2: icono PT, contador de mensajes y botón Actualizar página. La aplicación de escritorio comparte el editor del VST3.*
 
 ## 1. Descargar e instalar
 
@@ -14,7 +14,7 @@ JOSEADOR abre páginas web en una ventana móvil y entrega su audio al DAW. En F
 2. **Extrae todo el ZIP**. Cierra FL Studio u otro DAW.
 3. Ejecuta **Instalar JOSEADOR.exe**, acepta el permiso de administrador de Windows y pulsa **Instalar**. Conserva junto al EXE las carpetas JOSEADOR.vst3 y Prerequisites.
 4. Si falta Visual C++, se abrirá el instalador oficial de Microsoft incluido. Completa sus instrucciones; Windows puede pedir permisos para ese componente. Si solicita reiniciar, hazlo antes de usar el plugin.
-5. Se instala JOSEADOR 0.4.1 completo en **C:\Program Files\Common Files\VST3\JOSEADOR.vst3**. No necesita ni instala una versión anterior. Si ya existe una copia en ese destino, se respalda en **%PROGRAMDATA%\JOSEADOR\PreviousVersions** antes de sustituirla.
+5. Se instala JOSEADOR 0.4.2 completo en **C:\Program Files\Common Files\VST3\JOSEADOR.vst3**. No necesita ni instala una versión anterior. Si ya existe una copia en ese destino, se respalda en **%PROGRAMDATA%\JOSEADOR\PreviousVersions** antes de sustituirla.
 
 El destino es compartido por todos los usuarios y requiere permisos de administrador. En Windows instalado en otra unidad se utiliza su carpeta Common Files x64. BrowserRuntime debe permanecer dentro del paquete. El instalador valida sus archivos y revierte una sustitución fallida cuando es posible. No abre ni cierra tu DAW por ti.
 
@@ -96,4 +96,4 @@ El círculo rojo de Inicio cuenta mensajes sin leer: de 1 a 99; por encima de 99
 
 [Abre la sala](https://part-time-gang.tangycondor.chatgpt.site). Cambiar a esta página puede detener el contenido web anterior; las otras pistas del DAW siguen funcionando.
 
-[Auditoría y correcciones de 0.4.0](AUDITORIA-0.4.0.md).
+[Auditoría y correcciones de 0.4.2](AUDITORIA-0.4.2.md).

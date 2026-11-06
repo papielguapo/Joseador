@@ -1,6 +1,7 @@
 #pragma once
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "Bridge.h"
+#include "AudioAccess.h"
 
 class BrowserSession {
 public:
@@ -25,12 +26,13 @@ public:
         if(!CreateProcessW(nullptr,command.data(),nullptr,nullptr,FALSE,CREATE_NO_WINDOW,nullptr,cwd.c_str(),&startup,&process)) {
             error="No se pudo iniciar el navegador: "+juce::String((int)GetLastError());shutdown();return false;
         }
-        published.store(bridge,std::memory_order_release);return true;
+        audioAccess.pointer.store(bridge);return true;
     }
     void shutdown() {
-        published.store(nullptr,std::memory_order_release);
+        audioAccess.pointer.store(nullptr);
+        while(audioAccess.readers.load()!=0)Sleep(0);
         if(bridge)bridge->quit=1;
-        if(process.hProcess){WaitForSingleObject(process.hProcess,4000);CloseHandle(process.hThread);CloseHandle(process.hProcess);process={};}
+        if(process.hProcess){if(WaitForSingleObject(process.hProcess,4000)==WAIT_TIMEOUT){TerminateProcess(process.hProcess,39);WaitForSingleObject(process.hProcess,1000);}CloseHandle(process.hThread);CloseHandle(process.hProcess);process={};}
         if(bridge){UnmapViewOfFile(bridge);bridge=nullptr;}
         if(mapping){CloseHandle(mapping);mapping=nullptr;}
         if(mutex){CloseHandle(mutex);mutex=nullptr;}
@@ -57,7 +59,8 @@ public:
         if(child&&IsWindow(child)){ShowWindow(child,SW_HIDE);SetParent(child,nullptr);SetWindowLongPtr(child,GWL_STYLE,WS_POPUP|WS_CLIPCHILDREN);}
     }
     void pull(juce::AudioBuffer<float>& output) {
-        output.clear();auto* b=published.load(std::memory_order_acquire);if(!b)return;
+        output.clear();AudioAccess<webcapture::Bridge>::Read access(audioAccess);auto* b=access.value;if(!b)return;
+        if(!b->streaming.load()){b->read.store(b->write.load());for(auto& c:converter)c.reset();return;}
         b->sampleRate.store((uint32_t)rate.load(),std::memory_order_relaxed);
         auto r=b->read.load(std::memory_order_relaxed),w=b->write.load(std::memory_order_acquire);
         auto ready=w-r;const auto sourceRate=b->audioRate.load();
@@ -81,16 +84,16 @@ public:
         if(!error.isEmpty())return error;
         if(!bridge)return "Preparando navegador";
         if(process.hProcess&&WaitForSingleObject(process.hProcess,0)==WAIT_OBJECT_0){DWORD code=0;GetExitCodeProcess(process.hProcess,&code);return "El navegador se cerro ("+juce::String((int)code)+")";}
-        if(bridge->fault)return "Error del navegador o del puente de audio";
+        if(bridge->fault){const auto lock=WaitForSingleObject(mutex,0);if(lock==WAIT_OBJECT_0||lock==WAIT_ABANDONED){juce::String detail(bridge->error);ReleaseMutex(mutex);if(detail.isNotEmpty())return detail;}return "Error del navegador o del puente de audio; pulsa Actualizar";}
         if(!bridge->ready)return "Iniciando navegador movil...";
         return "Salida exclusiva al DAW | "+juce::String(rate.load(),0)+" Hz";
     }
     DWORD pid() const{return process.dwProcessId;}
-    webcapture::Bridge* data() const{return published.load(std::memory_order_acquire);}
+    webcapture::Bridge* data() const{return audioAccess.pointer.load();}
     std::atomic<double> rate{48000};
 private:
     webcapture::Bridge* bridge=nullptr;
-    std::atomic<webcapture::Bridge*> published{nullptr};
+    AudioAccess<webcapture::Bridge> audioAccess;
     juce::AudioBuffer<float> resampleInput;
     juce::WindowedSincInterpolator converter[2];
     HANDLE mapping=nullptr,mutex=nullptr;

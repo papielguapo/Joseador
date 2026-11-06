@@ -55,11 +55,11 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR command,int){
  PWSTR common=nullptr;if(FAILED(SHGetKnownFolderPath(FOLDERID_ProgramFilesCommonX64,0,nullptr,&common))){CloseHandle(single);return 4;}pluginRoot=std::filesystem::path(common)/L"VST3";CoTaskMemFree(common);
  PWSTR data=nullptr;if(FAILED(SHGetKnownFolderPath(FOLDERID_ProgramData,0,nullptr,&data))){CloseHandle(single);return 4;}backupRoot=std::filesystem::path(data)/L"JOSEADOR/PreviousVersions";CoTaskMemFree(data);
  INITCOMMONCONTROLSEX controls{sizeof(controls),ICC_PROGRESS_CLASS};InitCommonControlsEx(&controls);SetProcessDPIAware();WNDCLASSW wc{};wc.lpfnWndProc=proc;wc.hInstance=instance;wc.lpszClassName=L"JOSEADOR-Installer";wc.hCursor=LoadCursor(nullptr,IDC_ARROW);wc.hbrBackground=(HBRUSH)(COLOR_WINDOW+1);RegisterClassW(&wc);
- mainWindow=CreateWindowExW(0,wc.lpszClassName,L"Instalar JOSEADOR 0.4.1",WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX,CW_USEDEFAULT,CW_USEDEFAULT,610,365,nullptr,nullptr,instance,nullptr);
+ mainWindow=CreateWindowExW(0,wc.lpszClassName,L"Instalar JOSEADOR 0.4.2",WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_MINIMIZEBOX,CW_USEDEFAULT,CW_USEDEFAULT,610,365,nullptr,nullptr,instance,nullptr);
  font=CreateFontW(-16,0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,0,0,CLEARTYPE_QUALITY,0,L"Segoe UI");titleFont=CreateFontW(-27,0,0,0,FW_SEMIBOLD,FALSE,FALSE,FALSE,DEFAULT_CHARSET,0,0,CLEARTYPE_QUALITY,0,L"Segoe UI");
  auto title=control(L"STATIC",L"JOSEADOR",0,24,20,540,40);SendMessageW(title,WM_SETFONT,(WPARAM)titleFont,TRUE);control(L"STATIC",L"Instrumento VST3 x64 por PAPIELGUAPO",0,25,61,540,25);
  control(L"STATIC",L"Cierra tu DAW. Instalacion completa, sin necesitar una version anterior.\nSi falta Visual C++, se abrira el instalador oficial de Microsoft.",0,25,101,550,48);control(L"STATIC",L"Destino compartido para todos los usuarios:",0,25,160,540,22);control(L"EDIT",pluginRoot.c_str(),ES_READONLY|ES_AUTOHSCROLL|WS_BORDER,25,185,545,26);
- statusText=control(L"STATIC",L"Listo para instalar JOSEADOR 0.4.1 y su navegador.",0,25,225,545,22);progressBar=control(PROGRESS_CLASSW,L"",0,25,252,545,13);SendMessageW(progressBar,PBM_SETRANGE32,0,100);
+ statusText=control(L"STATIC",L"Listo para instalar JOSEADOR 0.4.2 y su navegador.",0,25,225,545,22);progressBar=control(PROGRESS_CLASSW,L"",0,25,252,545,13);SendMessageW(progressBar,PBM_SETRANGE32,0,100);
  installButton=control(L"BUTTON",L"Instalar",BS_DEFPUSHBUTTON,350,284,105,31,101);cancelButton=control(L"BUTTON",L"Cancelar",0,465,284,105,31,102);
  ShowWindow(mainWindow,SW_SHOW);MSG message{};while(GetMessageW(&message,nullptr,0,0)>0){TranslateMessage(&message);DispatchMessageW(&message);}DeleteObject(font);DeleteObject(titleFont);ReleaseMutex(single);CloseHandle(single);return 0;
 }

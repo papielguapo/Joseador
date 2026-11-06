@@ -1,3 +1,5 @@
+Validación actual: [auditoría de 0.4.2](docs/AUDITORIA-0.4.2.md).
+
 # Validación de JOSEADOR 0.4.0
 
 La revisión actual y los resultados están en [AUDITORIA-0.4.0.md](docs/AUDITORIA-0.4.0.md). Se reproducen a continuación las comprobaciones anteriores como historial.

@@ -1,8 +1,8 @@
 #include <windows.h>
 1 RT_MANIFEST "Installer.manifest"
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION 0,4,1,0
-PRODUCTVERSION 0,4,1,0
+FILEVERSION 0,4,2,0
+PRODUCTVERSION 0,4,2,0
 BEGIN
  BLOCK "StringFileInfo"
  BEGIN
@@ -10,9 +10,9 @@ BEGIN
   BEGIN
    VALUE "CompanyName", "PAPIELGUAPO\0"
    VALUE "FileDescription", "Instalar JOSEADOR\0"
-   VALUE "FileVersion", "0.4.1\0"
+   VALUE "FileVersion", "0.4.2\0"
    VALUE "ProductName", "JOSEADOR\0"
-   VALUE "ProductVersion", "0.4.1\0"
+   VALUE "ProductVersion", "0.4.2\0"
   END
  END
  BLOCK "VarFileInfo"

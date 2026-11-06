@@ -2,6 +2,9 @@
  if(window.__wcWheelInstalled)return;
  window.__wcWheelInstalled=true;
  let accumulated=0,last=-1000,reported="",hover=null;
+ // Keep only numeric diagnostics for a visible failed video; never its URL.
+ addEventListener('error',e=>{const v=e.target;if(v?.tagName!=='VIDEO'||!v.error)return;const r=v.getBoundingClientRect();if(r.width>0&&r.height>0&&r.bottom>0&&r.top<innerHeight)console.debug('__WC_MEDIA__:'+v.error.code);},{capture:true});
+ addEventListener('playing',e=>{if(e.target?.tagName==='VIDEO')console.debug('__WC_MEDIA__:ok');},{capture:true});
  const mode=()=>{
    if(!/^https?:$/.test(location.protocol))return '';
    const p=location.pathname.toLowerCase(),h=location.hostname.toLowerCase();
@@ -16,7 +19,13 @@
  const blocked=t=>{
    if(t?.isContentEditable)return true;
    if(t?.closest?.('input,textarea,select,[contenteditable="true"],[role="textbox"],[role="slider"],[role="menu"]'))return true;
-   for(let n=t;n&&n!==document.body;n=n.parentElement){if(n.matches?.('[role="dialog"],textarea')&&!n.querySelector?.('video')&&n.scrollHeight>n.clientHeight+4)return true;}return false;
+   for(let n=t;n&&n!==document.body;n=n.parentElement){
+     // Nested comment lists and menus must keep their own wheel scrolling.
+     if(n.scrollHeight>n.clientHeight+4&&!n.querySelector?.('video')){
+       const overflow=getComputedStyle(n).overflowY;
+       if(overflow==='auto'||overflow==='scroll'||n.matches?.('[role="dialog"],textarea'))return true;
+     }
+   }return false;
  };
  const report=()=>{const value=blocked(hover)?'normal':(mode()||'normal');if(value!==reported){reported=value;console.debug('__WC_MODE__:'+value);}};
  addEventListener('pointermove',e=>{hover=e.target;report();},{passive:true,capture:true});
@@ -33,7 +42,7 @@
    if(blocked(e.target))return;
    const m=mode();if(!m)return;
    e.preventDefault();
-   const now=performance.now();if(now-last<450)return;
+   const now=performance.now();if(now-last<(m==='scroll'?450:700))return;
    if(accumulated&&Math.sign(accumulated)!==Math.sign(e.deltaY))accumulated=0;
    accumulated+=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?innerHeight:1);
    if(Math.abs(accumulated)<35)return;

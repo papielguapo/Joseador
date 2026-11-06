@@ -1,18 +1,20 @@
-# JOSEADOR 0.4.1
+# JOSEADOR 0.4.2
 
 **Por PAPIELGUAPO.** Instrumento VST3 para Windows 11 x64: navegador móvil reescalable, audio al DAW y chat de la comunidad.
 
-[**Descargar ZIP con instalador EXE**](https://github.com/papielguapo/Joseador/releases/latest) · [**Guía**](docs/GUIA.md) · [**Auditoría y correcciones**](docs/AUDITORIA-0.4.0.md)
+[**Descargar ZIP con instalador EXE**](https://github.com/papielguapo/Joseador/releases/latest) · [**Guía**](docs/GUIA.md) · [**Auditoría y correcciones**](docs/AUDITORIA-0.4.2.md)
 
-<img src="docs/images/joseador-040.jpg" width="400" alt="JOSEADOR con el acceso PT y un mensaje sin leer">
+<img src="docs/images/joseador-042.png" width="400" alt="JOSEADOR con el acceso PT y un mensaje sin leer">
 
-*Interfaz real de 0.4.0, capturada en la aplicación de escritorio que comparte el editor del VST3.*
+*Interfaz real de 0.4.2, capturada en la aplicación de escritorio que comparte el editor del VST3.*
+
+En 0.4.2 se estabiliza el ajuste móvil y el scroll de feeds, se protege el reinicio frente al audio y se recupera un renderer caído. Inicio integra el degradado hasta su borde inferior y la desconexión se indica con Wi-Fi y una X. Véase la [auditoría y sus límites](docs/AUDITORIA-0.4.2.md).
 
 ## Instalar
 
 1. Descarga y **extrae el ZIP completo**.
 2. Cierra el DAW y abre **Instalar JOSEADOR.exe**. Acepta el permiso de administrador y pulsa Instalar.
-3. Se instalan JOSEADOR 0.4.1 y BrowserRuntime completos en **C:\Program Files\Common Files\VST3\JOSEADOR.vst3**, para todos los usuarios. No requiere ninguna versión anterior. Si falta Visual C++, se abre el instalador oficial de Microsoft incluido en Prerequisites; completa sus instrucciones.
+3. Se instalan JOSEADOR 0.4.2 y BrowserRuntime completos en **C:\Program Files\Common Files\VST3\JOSEADOR.vst3**, para todos los usuarios. No requiere ninguna versión anterior. Si falta Visual C++, se abre el instalador oficial de Microsoft incluido en Prerequisites; completa sus instrucciones.
 4. En FL Studio, vuelve a escanear los plugins de **C:\Program Files\Common Files\VST3**. Carga **JOSEADOR**, fabricante **PAPIELGUAPO**, como instrumento del Channel Rack.
 
 El EXE necesita los archivos del ZIP junto a él: conserva las carpetas JOSEADOR.vst3 y Prerequisites hasta terminar. También se incluye install.ps1 como alternativa para equipos con el runtime ya instalado. Consulta la guía para la instalación manual. Los respaldos opcionales de una instalación existente se guardan en **%PROGRAMDATA%\JOSEADOR\PreviousVersions**; no se instalan ni se cargan como plugins.
@@ -45,7 +47,7 @@ Cookies y almacenamiento web persisten sujetos a caducidad del servicio. En form
 
 ## Compatibilidad y pruebas
 
-Instrumento/MIDI/estado comprobados a 44,1/48/96 kHz. Pruebas de CEF para audio sin salida duplicada, recarga, historial y vista pequeña; seis suites CTest, regresiones de sesión y estado abierto, 26 comprobaciones del chat y contador 0/1/99/100/1000. La apertura de PT y el paso de contador 1 a 0 se verificaron dentro del editor compartido.
+Instrumento/MIDI/estado comprobados a 44,1/48/96 kHz. Pruebas de CEF para audio sin salida duplicada, recarga, historial y vista pequeña; siete suites CTest, regresiones de sesión y estado abierto, 26 comprobaciones del chat y contador 0/1/99/100/1000. La apertura de PT y el paso de contador 1 a 0 se verificaron dentro del editor compartido.
 
 No está certificado con todos los DAWs o cuentas reales de cada plataforma. Pro Tools no carga VST3 directamente. No soporta macOS, Linux ni hosts de 32 bits. **Reinicia FL Studio tras actualizar**: el VST3 y su helper deben pertenecer a la misma versión.
 
