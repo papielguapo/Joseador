@@ -29,7 +29,7 @@ Sin Internet se muestra una pantalla con la imagen integrada y el aviso de conex
 
 Inicio contiene YouTube, TikTok, Instagram, Facebook, X, Reddit, Twitch, SoundCloud, Spotify, **Part Time Gang** y Gmail. Se ha retirado el acceso a WhatsApp.
 
-El buscador inferior abre direcciones o búsquedas con Enter. El botón izquierdo retrocede hasta Inicio y el derecho **actualiza la página**. La rueda y las flechas envían gestos a las webs; los campos editables mantienen sus teclas normales. El resultado depende de cada servicio.
+El buscador inferior abre direcciones o búsquedas con Enter. A la izquierda están Atrás, Adelante y Actualizar página. Las tres barras de la derecha abren un menú con **Volver a Inicio**, **Actualizar VST** y la versión instalada al pie. Actualizar VST abre la última versión pública de GitHub para descargar el ZIP con instalador; las futuras publicaciones aparecen en el mismo acceso. La descarga puede hacerse con el DAW abierto; instalar una versión completa requiere cerrarlo. Quitar y volver a cargar el instrumento no garantiza descargar de memoria su DLL. La rueda y las flechas envían gestos a las webs; los campos editables mantienen sus teclas normales. El resultado depende de cada servicio.
 
 El audio sale siempre al DAW, sin una segunda reproducción local de Windows. Asigna el instrumento a una pista del Mixer y graba con Edison o con la grabación de pistas. Las notas MIDI no disparan ni afinan la web. Cerrar el editor no detiene la reproducción mientras el instrumento siga cargado y el host lo procese. No hay grabador WAV interno, selector de escritorio o renderizado acelerado sin conexión.
 
@@ -51,7 +51,7 @@ Cookies y almacenamiento web persisten sujetos a caducidad del servicio. En form
 
 ## Compatibilidad y pruebas
 
-Instrumento/MIDI/estado comprobados a 44,1/48/96 kHz. Pruebas de CEF para audio sin salida duplicada, recarga, historial y vista pequeña; siete suites CTest, regresiones de sesión y estado abierto, 26 comprobaciones del chat y contador 0/1/99/100/1000. La apertura de PT y el paso de contador 1 a 0 se verificaron dentro del editor compartido.
+Instrumento/MIDI/estado comprobados a 44,1/48/96 kHz. Pruebas de CEF para audio sin salida duplicada, recarga, historial y vista pequeña; siete suites CTest, regresiones de sesión y estado abierto, 36 comprobaciones del chat y contador 0/1/99/100/1000. La apertura de PT y el paso de contador 1 a 0 se verificaron dentro del editor compartido.
 
 No está certificado con todos los DAWs o cuentas reales de cada plataforma. Pro Tools no carga VST3 directamente. No soporta macOS, Linux ni hosts de 32 bits. **Reinicia FL Studio tras actualizar**: el VST3 y su helper deben pertenecer a la misma versión.
 

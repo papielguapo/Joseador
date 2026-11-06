@@ -7,7 +7,7 @@ class Processor;
 class NavigationButton final:public juce::Button {
 public:
     enum Kind { back, forward, refresh, start };
-    explicit NavigationButton(Kind k):Button(k==back?"Atras / Inicio":k==forward?"Adelante":k==start?"Inicio":"Actualizar pagina"),kind(k){setTooltip(getName());}
+    explicit NavigationButton(Kind k):Button(k==back?"Atras / Inicio":k==forward?"Adelante":k==start?"Menu":"Actualizar pagina"),kind(k){setTooltip(getName());}
     void paintButton(juce::Graphics& g,bool over,bool down)override{
         const auto bounds=getLocalBounds().toFloat();
         if(over||down){g.setColour(juce::Colour(down?0xff383b40:0xff2d3035));g.fillRoundedRectangle(bounds.reduced(1),8);}
@@ -43,6 +43,8 @@ private:
     juce::Image offlineImage=juce::ImageCache::getFromMemory(JoseadorAssets::offline_png,JoseadorAssets::offline_pngSize);
     juce::TooltipWindow tips{this,500};
     void timerCallback()override;
+    void showNavigationMenu();
+    void showUpdateInstructions();
 };
 class Processor final:public juce::AudioProcessor {
 public:
@@ -71,7 +73,7 @@ Editor::Editor(Processor& p):AudioProcessorEditor(p),proc(p),browser(p.session){
     setResizable(true,true);setResizeLimits(320,400,1200,1400);setSize(400,680);
     for(auto* c:std::initializer_list<juce::Component*>{&browser,&url,&home,&forward,&reload,&start})addAndMakeVisible(c);
     home.setTitle("Atras / Inicio");
-    start.onClick=[this]{proc.lastUrl="webcapture://home";if(!proc.session.running())proc.ensureBrowser();else proc.session.command(1,proc.lastUrl);url.setText({},false);};
+    start.onClick=[this]{showNavigationMenu();};
     forward.onClick=[this]{if(proc.session.running())proc.session.command(3);};
     reload.onClick=[this]{if(!proc.session.running())proc.ensureBrowser();else proc.session.command(6);};
     url.setText(proc.lastUrl=="webcapture://home"?juce::String():proc.lastUrl);url.setSelectAllWhenFocused(true);
@@ -94,6 +96,35 @@ Editor::Editor(Processor& p):AudioProcessorEditor(p),proc(p),browser(p.session){
         }
         proc.lastUrl=address;if(!proc.session.running())proc.ensureBrowser();else proc.session.command(1,address);url.setText(address,false);};
     startTimerHz(2);
+}
+void Editor::showNavigationMenu(){
+    juce::PopupMenu menu;
+    menu.addItem(1,"Volver a Inicio");
+    menu.addItem(2,"Actualizar VST...");
+    menu.addSeparator();
+    menu.addSectionHeader(juce::String::fromUTF8("Versión instalada: ")+JucePlugin_VersionString);
+    const juce::Component::SafePointer<Editor> safe(this);
+    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this)
+        .withTargetScreenArea(juce::Rectangle<int>(getScreenX()+getWidth()-280,start.getScreenY(),260,start.getHeight())).withMinimumWidth(260)
+        .withPreferredPopupDirection(juce::PopupMenu::Options::PopupDirection::upwards),[safe](int choice){
+        if(!safe)return;
+        if(choice==1){safe->proc.lastUrl="webcapture://home";if(!safe->proc.session.running())safe->proc.ensureBrowser();else safe->proc.session.command(1,safe->proc.lastUrl);safe->url.setText({},false);}
+        else if(choice==2)safe->showUpdateInstructions();
+    });
+}
+void Editor::showUpdateInstructions(){
+    const juce::Component::SafePointer<Editor> safe(this);
+    juce::AlertWindow::showAsync(juce::MessageBoxOptions().withIconType(juce::MessageBoxIconType::InfoIcon)
+        .withTitle("Actualizar JOSEADOR")
+        .withMessage(juce::String::fromUTF8("Versión instalada: ")+JucePlugin_VersionString+juce::String::fromUTF8(
+            "\n\nAbre la última versión pública de GitHub y descarga el ZIP completo. Puedes descargarlo con el DAW abierto."
+            "\n\nPara instalar el VST completo, guarda tu proyecto, cierra el DAW, extrae el ZIP y ejecuta Instalar JOSEADOR.exe."
+            "\n\nAlgunos DAWs mantienen el VST en memoria aunque lo retires. Por eso, quitarlo y añadirlo no garantiza actualizar la versión completa. Este acceso mostrará también las próximas versiones publicadas."))
+        .withButton(juce::String::fromUTF8("Abrir última versión")).withButton("Cancelar"),[safe](int choice){
+            if(choice!=1||!safe)return;
+            if(!juce::URL("https://github.com/papielguapo/Joseador/releases/latest").launchInDefaultBrowser())
+                juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon,"Actualizar JOSEADOR",juce::String::fromUTF8("No se pudo abrir el navegador. Visita https://github.com/papielguapo/Joseador/releases/latest"));
+        });
 }
 void Editor::resized(){
     browser.setBounds(4,47,getWidth()-8,getHeight()-116);

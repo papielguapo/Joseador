@@ -42,7 +42,7 @@ Para volver a Inicio desde el buscador, escribe **inicio** y pulsa Enter, o deja
 
 Pulsa cualquiera de los once iconos: YouTube, TikTok, Instagram, Facebook, X, Reddit, Twitch, SoundCloud, Spotify, Part Time Gang o Gmail. Gmail abre su web y Part Time Gang abre la sala compartida.
 
-También puedes escribir una dirección o una búsqueda en la barra inferior y pulsar **Enter**. El botón izquierdo retrocede por el historial hasta llegar a Inicio; allí permanece. A la izquierda se agrupan **Atrás**, **Adelante** y **Actualizar página**. Actualizar recarga la web abierta; Adelante recupera la siguiente página del historial. El icono de tres líneas de la derecha lleva directamente a **Inicio**, sin recorrer el historial. Para sustituir texto, selecciónalo en el buscador y escribe la nueva dirección.
+También puedes escribir una dirección o una búsqueda en la barra inferior y pulsar **Enter**. El botón izquierdo retrocede por el historial hasta llegar a Inicio; allí permanece. A la izquierda se agrupan **Atrás**, **Adelante** y **Actualizar página**. Actualizar recarga la web abierta; Adelante recupera la siguiente página del historial. El icono de tres líneas de la derecha abre un menú. **Volver a Inicio** lleva directamente al menú de apps, sin recorrer el historial. **Actualizar VST** abre las instrucciones y el acceso a la última versión pública de GitHub. Abajo aparece la versión del VST realmente cargado. Para sustituir texto, selecciónalo en el buscador y escribe la nueva dirección.
 
 Arrastra la esquina de la ventana para cambiar su tamaño. La vista móvil y la pantalla de Inicio se adaptan al espacio disponible.
 
@@ -107,3 +107,11 @@ El círculo rojo de Inicio cuenta mensajes sin leer: de 1 a 99; por encima de 99
 [Corrección de scroll de 0.4.3](CORRECCION-SCROLL-0.4.3.md).
 
 En Instagram y Facebook Reels, usa la rueda abajo/arriba para avanzar/retroceder. En historias, los mismos movimientos corresponden al lado derecho/izquierdo de la pantalla. Los campos de texto y paneles de comentarios conservan su entrada. Las webs del menú permanecen dentro del navegador al intentar abrir un protocolo de aplicación externa.
+
+## Actualizar desde el menú
+
+Pulsa **☰ → Actualizar VST → Abrir última versión**. Se abre el navegador predeterminado con la última publicación estable de [GitHub Releases](https://github.com/papielguapo/Joseador/releases/latest). Puedes descargar el ZIP con el DAW abierto. No es un instalador automático: extrae el ZIP completo y ejecuta **Instalar JOSEADOR.exe** con el DAW cerrado; después vuelve a abrirlo.
+
+La versión al pie del menú corresponde al binario que el DAW tiene cargado. Descargar otra versión no cambia ese número. Algunos hosts mantienen la DLL en memoria después de retirar el instrumento, por lo que quitarlo y volverlo a añadir no garantiza cargar código nativo nuevo. Las actualizaciones de scripts web, cuando se distribuyen por separado, pueden aplicarse al recargar una página.
+
+Para publicar futuras actualizaciones, incrementa la versión de CMake y del instalador, compila y adjunta el ZIP completo a una release pública estable del mismo repositorio. Márcala como Latest. Los borradores y versiones preliminares no deben sustituir la descarga estable. No hay que modificar la URL del menú para cada versión.
