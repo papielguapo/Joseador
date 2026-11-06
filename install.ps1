@@ -1,6 +1,8 @@
+#Requires -RunAsAdministrator
 $ErrorActionPreference='Stop'
 $bundle=Join-Path $PSScriptRoot 'JOSEADOR.vst3'
-$destination=Join-Path $env:LOCALAPPDATA 'Programs\Common\VST3'
+$destination=Join-Path ${env:CommonProgramW6432} 'VST3'
+$backupRoot=Join-Path $env:ProgramData 'JOSEADOR\PreviousVersions'
 if(!(Test-Path -LiteralPath $bundle)){throw 'Falta la carpeta completa JOSEADOR.vst3'}
 New-Item -ItemType Directory -Force $destination | Out-Null
 $staging=Join-Path $destination ('JOSEADOR-staging-'+[Guid]::NewGuid().ToString('N'))
@@ -15,7 +17,6 @@ if(Test-Path -LiteralPath $previous){
  $resolved=[IO.Path]::GetFullPath($previous)
  $allowed=[IO.Path]::GetFullPath($destination)+[IO.Path]::DirectorySeparatorChar
  if(!$resolved.StartsWith($allowed,[StringComparison]::OrdinalIgnoreCase)){throw 'Ruta anterior fuera del directorio VST3'}
- $backupRoot=Join-Path $env:LOCALAPPDATA 'WebCaptureMobile\PreviousVersions'
  New-Item -ItemType Directory -Force $backupRoot | Out-Null
  $backup=Join-Path $backupRoot ('WebCapture Mobile-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.vst3')
  Move-Item -LiteralPath $resolved -Destination $backup
@@ -26,7 +27,6 @@ if(Test-Path -LiteralPath $current){
  $resolved=[IO.Path]::GetFullPath($current)
  $allowed=[IO.Path]::GetFullPath($destination)+[IO.Path]::DirectorySeparatorChar
  if(!$resolved.StartsWith($allowed,[StringComparison]::OrdinalIgnoreCase)){throw 'Ruta de actualizacion fuera del directorio VST3'}
- $backupRoot=Join-Path $env:LOCALAPPDATA 'WebCaptureMobile\PreviousVersions'
  New-Item -ItemType Directory -Force $backupRoot | Out-Null
  $backup=Join-Path $backupRoot ('JOSEADOR-'+(Get-Date -Format 'yyyyMMdd-HHmmss-fff')+'.vst3')
  Move-Item -LiteralPath $resolved -Destination $backup

@@ -1,4 +1,4 @@
-# JOSEADOR 0.4.0
+# JOSEADOR 0.4.1
 
 **Por PAPIELGUAPO.** Instrumento VST3 para Windows 11 x64: navegador móvil reescalable, audio al DAW y chat de la comunidad.
 
@@ -11,11 +11,13 @@
 ## Instalar
 
 1. Descarga y **extrae el ZIP completo**.
-2. Cierra el DAW y abre **Instalar JOSEADOR.exe**. Pulsa Instalar.
-3. Se copian JOSEADOR.vst3 y BrowserRuntime para tu usuario, con respaldo de la versión anterior. Si falta Visual C++, se abre el instalador oficial de Microsoft incluido en Prerequisites; completa sus instrucciones.
-4. En FL Studio, añade la ruta **%LOCALAPPDATA%\Programs\Common\VST3** al gestor de plugins si falta y vuelve a escanear. Carga **JOSEADOR**, fabricante **PAPIELGUAPO**, como instrumento del Channel Rack.
+2. Cierra el DAW y abre **Instalar JOSEADOR.exe**. Acepta el permiso de administrador y pulsa Instalar.
+3. Se instalan JOSEADOR 0.4.1 y BrowserRuntime completos en **C:\Program Files\Common Files\VST3\JOSEADOR.vst3**, para todos los usuarios. No requiere ninguna versión anterior. Si falta Visual C++, se abre el instalador oficial de Microsoft incluido en Prerequisites; completa sus instrucciones.
+4. En FL Studio, vuelve a escanear los plugins de **C:\Program Files\Common Files\VST3**. Carga **JOSEADOR**, fabricante **PAPIELGUAPO**, como instrumento del Channel Rack.
 
-El EXE necesita los archivos del ZIP junto a él: conserva las carpetas JOSEADOR.vst3 y Prerequisites hasta terminar. También se incluye install.ps1 como alternativa para equipos con el runtime ya instalado. Consulta la guía para la instalación manual.
+El EXE necesita los archivos del ZIP junto a él: conserva las carpetas JOSEADOR.vst3 y Prerequisites hasta terminar. También se incluye install.ps1 como alternativa para equipos con el runtime ya instalado. Consulta la guía para la instalación manual. Los respaldos opcionales de una instalación existente se guardan en **%PROGRAMDATA%\JOSEADOR\PreviousVersions**; no se instalan ni se cargan como plugins.
+
+Si ya tenías una copia en la ruta VST3 de usuario, retírala de esa ruta con el DAW cerrado para evitar duplicados. Véanse los [cambios y comprobaciones del instalador 0.4.1](docs/INSTALACION-0.4.1.md).
 
 ## Navegar y grabar
 

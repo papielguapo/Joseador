@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(WebCaptureMobile VERSION 0.4.0 LANGUAGES C CXX)
+project(WebCaptureMobile VERSION 0.4.1 LANGUAGES C CXX)
 if(NOT WIN32)
  message(FATAL_ERROR "Windows 11 x64 required")
 endif()

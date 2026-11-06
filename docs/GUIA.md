@@ -1,6 +1,6 @@
 # Guía de JOSEADOR
 
-**Por PAPIELGUAPO · Windows 11 x64 · VST3 · Versión 0.4.0**
+**Por PAPIELGUAPO · Windows 11 x64 · VST3 · Versión 0.4.1**
 
 JOSEADOR abre páginas web en una ventana móvil y entrega su audio al DAW. En FL Studio se carga como instrumento en el Channel Rack.
 
@@ -12,21 +12,23 @@ JOSEADOR abre páginas web en una ventana móvil y entrega su audio al DAW. En F
 
 1. Abre [Releases](https://github.com/papielguapo/Joseador/releases/latest) y descarga el ZIP de Windows 11 VST3.
 2. **Extrae todo el ZIP**. Cierra FL Studio u otro DAW.
-3. Ejecuta **Instalar JOSEADOR.exe** y pulsa **Instalar**. Conserva junto al EXE las carpetas JOSEADOR.vst3 y Prerequisites.
+3. Ejecuta **Instalar JOSEADOR.exe**, acepta el permiso de administrador de Windows y pulsa **Instalar**. Conserva junto al EXE las carpetas JOSEADOR.vst3 y Prerequisites.
 4. Si falta Visual C++, se abrirá el instalador oficial de Microsoft incluido. Completa sus instrucciones; Windows puede pedir permisos para ese componente. Si solicita reiniciar, hazlo antes de usar el plugin.
-5. El paquete completo se instala en **%LOCALAPPDATA%\Programs\Common\VST3\JOSEADOR.vst3**. La versión anterior se conserva en **%LOCALAPPDATA%\WebCaptureMobile\PreviousVersions**.
+5. Se instala JOSEADOR 0.4.1 completo en **C:\Program Files\Common Files\VST3\JOSEADOR.vst3**. No necesita ni instala una versión anterior. Si ya existe una copia en ese destino, se respalda en **%PROGRAMDATA%\JOSEADOR\PreviousVersions** antes de sustituirla.
 
-No se necesita administrador para copiar el VST3 al destino de usuario. BrowserRuntime debe permanecer dentro del paquete. El instalador valida sus archivos y revierte una sustitución fallida cuando es posible. No abre ni cierra tu DAW por ti.
+El destino es compartido por todos los usuarios y requiere permisos de administrador. En Windows instalado en otra unidad se utiliza su carpeta Common Files x64. BrowserRuntime debe permanecer dentro del paquete. El instalador valida sus archivos y revierte una sustitución fallida cuando es posible. No abre ni cierra tu DAW por ti.
 
-Para instalación manual, copia la carpeta JOSEADOR.vst3 completa al destino anterior y asegúrate de disponer del runtime de Microsoft. install.ps1 sigue disponible como alternativa. El EXE propio no tiene firma digital; el runtime de Microsoft sí conserva su firma original.
+Para instalación manual, copia la carpeta JOSEADOR.vst3 completa al destino anterior y asegúrate de disponer del runtime de Microsoft. install.ps1 sigue disponible como alternativa ejecutándolo desde PowerShell como administrador. El EXE propio no tiene firma digital; el runtime de Microsoft sí conserva su firma original.
 
 ## 2. Encontrarlo en FL Studio
 
 1. Abre **Options > Manage plugins**; según la versión, también se accede desde **Options > File settings > Manage plugins**.
-2. Comprueba que la carpeta `%LOCALAPPDATA%\Programs\Common\VST3` figure entre las rutas de búsqueda. Añádela si falta.
+2. Comprueba que la carpeta `C:\Program Files\Common Files\VST3` figure entre las rutas de búsqueda. Añádela si falta.
 3. Ejecuta **Find installed plugins** con **Verify plugins** para que se clasifique como instrumento.
 4. Si sigue apareciendo el nombre antiguo, activa **Rescan previously verified plugins** y repite el escaneo.
 5. En el Channel Rack, abre **+ > More plugins…**, busca **JOSEADOR** y cárgalo. El fabricante debe ser **PAPIELGUAPO**.
+
+Si instalaste 0.4.0 en `%LOCALAPPDATA%\Programs\Common\VST3`, mueve esa copia anterior de JOSEADOR.vst3 fuera de las rutas de plugins con el DAW cerrado para evitar duplicados. El instalador nuevo no depende de ella ni utiliza sus archivos; las sesiones web permanecen en el perfil de usuario.
 
 Puedes marcarlo como favorito para encontrarlo después en el selector. Estos pasos siguen el [manual de instalación de plugins de Image-Line](https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/basics_externalplugins.htm).
 
