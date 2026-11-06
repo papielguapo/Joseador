@@ -21,6 +21,8 @@ El EXE necesita los archivos del ZIP junto a él: conserva las carpetas JOSEADOR
 
 Si ya tenías una copia en la ruta VST3 de usuario, retírala de esa ruta con el DAW cerrado para evitar duplicados. Véanse los [cambios y comprobaciones del instalador 0.4.1](docs/INSTALACION-0.4.1.md).
 
+Sin Internet se muestra una pantalla con la imagen integrada y el aviso de conexión. Al recuperar acceso a Internet se carga Inicio automáticamente. Escribe **inicio** o pulsa Enter con el buscador vacío para volver a Inicio.
+
 ## Navegar y grabar
 
 Inicio contiene YouTube, TikTok, Instagram, Facebook, X, Reddit, Twitch, SoundCloud, Spotify, **Part Time Gang** y Gmail. Se ha retirado el acceso a WhatsApp.

@@ -2,6 +2,7 @@
 #include <winsock2.h>
 #include <ws2ipdef.h>
 #include <iphlpapi.h>
+#include <netlistmgr.h>
 
 // Reads adapter and power state off the GUI/audio threads. No SSIDs, location
 // access, network requests or system-setting changes are needed.
@@ -10,10 +11,14 @@ public:
     SystemStatus():Thread("PC status"){startThread();}
     ~SystemStatus()override{signalThreadShouldExit();notify();stopThread(-1);}
     std::atomic<int> network{-1},battery{-1},power{-1},charging{0};
+    std::atomic<int> internet{-1};
     // network: -1 unknown, 0 offline, 1 ethernet, 2 Wi-Fi
     // battery: -2 no battery, -1 unknown, otherwise percentage
 private:
     void run()override{
+        const auto com=CoInitializeEx(nullptr,COINIT_MULTITHREADED);
+        INetworkListManager* manager=nullptr;
+        if(SUCCEEDED(com))CoCreateInstance(__uuidof(NetworkListManager),nullptr,CLSCTX_INPROC_SERVER,__uuidof(INetworkListManager),(void**)&manager);
         while(!threadShouldExit()){
             SYSTEM_POWER_STATUS p{};
             if(GetSystemPowerStatus(&p)){
@@ -31,7 +36,12 @@ private:
                 }
                 network=state;FreeMibTable(table);
             }
+            NLM_CONNECTIVITY connectivity{};
+            if(manager&&SUCCEEDED(manager->GetConnectivity(&connectivity)))internet=(connectivity&(NLM_CONNECTIVITY_IPV4_INTERNET|NLM_CONNECTIVITY_IPV6_INTERNET))?1:0;
+            else internet=-1;
             wait(2000);
         }
+        if(manager)manager->Release();
+        if(SUCCEEDED(com))CoUninitialize();
     }
 };

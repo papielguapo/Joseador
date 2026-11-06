@@ -12,7 +12,13 @@ Revisión de navegador CEF, controles de entrada, ciclo de vida del puente de au
 6. **Error de audio persistente y cierre incompleto.** Un stream nuevo limpia su error anterior; al detenerse se descarta audio pendiente y se reinicia el interpolador. Si el proceso propio no termina durante el cierre, se finaliza antes de liberar sus recursos.
 7. **Franja monocromática al pie de Inicio.** La raíz usa el mismo degradado y el cuerpo establece su propio contexto de formato para evitar el colapso del margen de la cuadrícula. El fondo llega al borde inferior de la pantalla; se conserva la separación oscura del buscador de la referencia.
 
+El buscador abre Inicio al pulsar Enter con el campo vacío o con «inicio», sin distinguir mayúsculas ni espacios alrededor.
+
 También se sustituye «OFF» por el símbolo de Wi-Fi con una X cuando el PC está sin conexión. Se mantienen Wi-Fi conectado, LAN y estado desconocido; no se modifica la configuración de red.
+
+## Pantalla sin Internet
+
+Se consulta Network List Manager de Windows en el hilo de estado, además de comprobar adaptadores. La ausencia de acceso a Internet oculta el navegador y sus controles, muestra el aviso y la imagen integrada, y mantiene el indicador Wi-Fi con X. La primera transición de vuelta a Internet carga Inicio; los sondeos posteriores no recargan la página. Se prueban conexión Wi-Fi sin Internet, desconexión de adaptadores, estados desconocidos y recuperación por Wi-Fi/Ethernet. Se verificó que Windows detectaba Internet en el PC de trabajo, sin desconectarlo ni cambiar sus ajustes de red.
 
 ## Validación
 

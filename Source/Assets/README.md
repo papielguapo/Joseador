@@ -1,0 +1,1 @@
+offline.png es el recurso visual aportado por el usuario para la pantalla de desconexión. Se incluye sin modificar. La licencia del código del proyecto no sustituye la licencia de imágenes de terceros ni atribuye su autoría a PAPIELGUAPO.

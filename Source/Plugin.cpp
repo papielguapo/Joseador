@@ -1,6 +1,8 @@
 #include "Browser.h"
 #include "SystemStatus.h"
 #include "NavigationPolicy.h"
+#include "BinaryData.h"
+#include "ConnectivityState.h"
 class Processor;
 class HomeButton final:public juce::Button {
 public:
@@ -33,6 +35,8 @@ private:
     HomeButton home;
     ReloadButton reload;
     SystemStatus pc;
+    ConnectivityState connection;
+    juce::Image offlineImage=juce::ImageCache::getFromMemory(JoseadorAssets::offline_png,JoseadorAssets::offline_pngSize);
     juce::TooltipWindow tips{this,500};
     void timerCallback()override;
 };
@@ -76,7 +80,8 @@ Editor::Editor(Processor& p):AudioProcessorEditor(p),proc(p),browser(p.session){
     url.setColour(juce::TextEditor::textColourId,juce::Colour(0xff171719));
     url.setColour(juce::TextEditor::outlineColourId,juce::Colours::transparentBlack);
     url.setColour(juce::TextEditor::focusedOutlineColourId,juce::Colours::transparentBlack);
-    url.onReturnKey=[this]{auto address=url.getText().trim();if(address.isEmpty())return;
+    url.onReturnKey=[this]{auto address=url.getText().trim();
+        if(address.isEmpty()||address.equalsIgnoreCase("inicio")){proc.lastUrl="webcapture://home";if(!proc.session.running())proc.ensureBrowser();else proc.session.command(1,proc.lastUrl);url.setText({},false);return;}
         if(!address.startsWithIgnoreCase("http://")&&!address.startsWithIgnoreCase("https://")){
             if(address.containsAnyOf(" \t")||!address.containsChar('.'))address="https://www.google.com/search?q="+juce::URL::addEscapeChars(address,true);
             else address="https://"+address;
@@ -95,7 +100,7 @@ void Editor::paint(juce::Graphics& g){
     g.setColour(juce::Colours::black);g.fillRoundedRectangle((float)getWidth()/2-44,8,88,26,13);
     g.setColour(juce::Colour(0xff172733));g.fillEllipse((float)getWidth()/2+25,16,9,9);
     g.setColour(juce::Colours::white);g.setFont(13);g.drawText(juce::Time::getCurrentTime().formatted("%H:%M"),17,10,55,23,juce::Justification::centredLeft);
-    const float x=(float)getWidth()-91;const int net=pc.network;
+    const float x=(float)getWidth()-91;const int net=pc.internet==0?0:pc.network.load();
     if(net==2||net==0){
         for(float r:{7.0f,12.0f}){juce::Path arc;arc.addCentredArc(x+9,29,r,r,0,-0.8f,0.8f,true);g.strokePath(arc,juce::PathStrokeType(1.8f));}g.fillEllipse(x+7,27,4,4);
         if(net==0){g.setColour(juce::Colour(0xff10151e));g.fillEllipse(x+15,22,13,13);g.setColour(juce::Colours::white);g.drawLine(x+18,25,x+24,31,1.7f);g.drawLine(x+24,25,x+18,31,1.7f);}
@@ -107,8 +112,21 @@ void Editor::paint(juce::Graphics& g){
         if(bat>=0){g.setColour(pc.charging?juce::Colour(0xff86e7bb):(bat<20?juce::Colours::salmon:juce::Colours::white));g.fillRoundedRectangle((float)getWidth()-57,17,31.0f*bat/100,11,1);g.setColour(bat>55?juce::Colours::black:juce::Colours::white);}
         g.setFont(10);g.drawText(bat>=0?juce::String(bat):"?",getWidth()-57,16,31,12,juce::Justification::centred);
     }
+    if(connection.offline){
+        g.setImageResamplingQuality(juce::Graphics::highResamplingQuality);
+        if(offlineImage.isValid())g.drawImageWithin(offlineImage,20,60,getWidth()-40,getHeight()-175,juce::RectanglePlacement::centred|juce::RectanglePlacement::onlyReduceInSize);
+        g.setColour(juce::Colours::white);g.setFont(17);
+        g.drawFittedText(juce::String::fromUTF8("Se requiere conexión a internet para usar este VST"),20,getHeight()-103,getWidth()-40,72,juce::Justification::centred,3);
+        return;
+    }
     g.setColour(juce::Colour(0xffaeb4bf));g.fillRoundedRectangle((float)getWidth()/2-44,(float)getHeight()-9,88,3,2);
     g.setColour(juce::Colour(0xfffdfdfe));g.fillRoundedRectangle(8,(float)getHeight()-60,(float)getWidth()-16,42,16);
 }
-void Editor::timerCallback(){const auto current=proc.session.address();if(current.isNotEmpty()&&current!="about:blank"){proc.lastUrl=current;if(!url.hasKeyboardFocus(true))url.setText(current=="webcapture://home"?juce::String():current,false);}auto text=proc.session.status();text+="\n";text+=pc.network==2?"Wi-Fi conectado":(pc.network==1?"Ethernet conectado":(pc.network==0?"Sin conexion de red":"Red no disponible"));text+=" | ";text+=pc.battery==-2?"PC sin bateria":(pc.battery>=0?"Bateria: "+juce::String(pc.battery.load())+"%":"Bateria no disponible");url.setTooltip(text);repaint();}
+void Editor::timerCallback(){
+    const auto change=connection.update(pc.network.load(),pc.internet.load());
+    if(change!=ConnectivityState::none){
+        const bool show=!connection.offline;
+        browser.setVisible(show);url.setVisible(show);home.setVisible(show);reload.setVisible(show);
+        if(change==ConnectivityState::restored){proc.lastUrl="webcapture://home";if(!proc.session.running())proc.ensureBrowser();else proc.session.command(1,proc.lastUrl);url.setText({},false);}
+    }const auto current=proc.session.address();if(change!=ConnectivityState::restored&&current.isNotEmpty()&&current!="about:blank"){proc.lastUrl=current;if(!url.hasKeyboardFocus(true))url.setText(current=="webcapture://home"?juce::String():current,false);}auto text=proc.session.status();text+="\n";text+=pc.network==2?"Wi-Fi conectado":(pc.network==1?"Ethernet conectado":(pc.network==0?"Sin conexion de red":"Red no disponible"));text+=" | ";text+=pc.battery==-2?"PC sin bateria":(pc.battery>=0?"Bateria: "+juce::String(pc.battery.load())+"%":"Bateria no disponible");url.setTooltip(text);repaint();}
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter(){return new Processor();}

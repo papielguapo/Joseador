@@ -32,7 +32,13 @@ Si instalaste 0.4.0 en `%LOCALAPPDATA%\Programs\Common\VST3`, mueve esa copia an
 
 Puedes marcarlo como favorito para encontrarlo después en el selector. Estos pasos siguen el [manual de instalación de plugins de Image-Line](https://www.image-line.com/fl-studio-learning/fl-studio-online-manual/html/basics_externalplugins.htm).
 
+## Sin conexión
+
+Si Windows informa de que no hay acceso a Internet, el navegador deja paso al mensaje «Se requiere conexión a internet para usar este VST» y a la imagen suministrada. La imagen está integrada en el plugin. Al recuperar Internet, la pantalla se retira y se vuelve a cargar Inicio, una sola vez por reconexión. La comprobación se realiza aproximadamente cada dos segundos, sin cambiar ajustes de red.
+
 ## 3. Abrir una web
+
+Para volver a Inicio desde el buscador, escribe **inicio** y pulsa Enter, o deja el campo vacío y pulsa Enter. No distingue mayúsculas y omite espacios alrededor.
 
 Pulsa cualquiera de los once iconos: YouTube, TikTok, Instagram, Facebook, X, Reddit, Twitch, SoundCloud, Spotify, Part Time Gang o Gmail. Gmail abre su web y Part Time Gang abre la sala compartida.
 
