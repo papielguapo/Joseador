@@ -4,26 +4,30 @@
 #include "BinaryData.h"
 #include "ConnectivityState.h"
 class Processor;
-class HomeButton final:public juce::Button {
+class NavigationButton final:public juce::Button {
 public:
-    HomeButton():Button("Atras"){setTooltip("Volver atras hasta Inicio");}
+    enum Kind { back, forward, refresh, start };
+    explicit NavigationButton(Kind k):Button(k==back?"Atras / Inicio":k==forward?"Adelante":k==start?"Inicio":"Actualizar pagina"),kind(k){setTooltip(getName());}
     void paintButton(juce::Graphics& g,bool over,bool down)override{
-        if(over||down){g.setColour(juce::Colour(down?0xffd4d7dd:0xffedf0f4));g.fillRoundedRectangle(getLocalBounds().toFloat().reduced(1),9);}
-        const float w=(float)getWidth(),h=(float)getHeight(),left=4,right=w-4,top=h*.27f,bottom=h*.73f,tip=h*.5f;
-        juce::Path outline;outline.startNewSubPath(left,tip);outline.lineTo(left+9,top);outline.lineTo(right-2,top);outline.quadraticTo(right,top,right,top+2);outline.lineTo(right,bottom-2);outline.quadraticTo(right,bottom,right-2,bottom);outline.lineTo(left+9,bottom);outline.closeSubPath();
-        g.setColour(juce::Colour(0xff171a20));g.strokePath(outline,juce::PathStrokeType(1.8f,juce::PathStrokeType::curved,juce::PathStrokeType::rounded));
-        const float cx=left+15,cy=h*.5f;g.drawLine(cx-3,cy-3,cx+3,cy+3,1.6f);g.drawLine(cx+3,cy-3,cx-3,cy+3,1.6f);
+        const auto bounds=getLocalBounds().toFloat();
+        if(over||down){g.setColour(juce::Colour(down?0xff383b40:0xff2d3035));g.fillRoundedRectangle(bounds.reduced(1),8);}
+        g.setColour(juce::Colour(0xffc5c7ca).withMultipliedAlpha(isEnabled()?1.0f:0.35f));
+        const float cx=bounds.getCentreX(),cy=bounds.getCentreY();
+        juce::Path icon;
+        if(kind==start){
+            for(float offset:{-6.0f,0.0f,6.0f}){icon.startNewSubPath(cx-8,cy+offset);icon.lineTo(cx+8,cy+offset);}
+        }else if(kind==refresh){
+            icon.addCentredArc(cx,cy,8,8,0,0.7f,6.1f,true);
+            icon.startNewSubPath(cx+5,cy-9);icon.lineTo(cx+5,cy-3);icon.lineTo(cx+10,cy-5);
+        }else{
+            const float direction=kind==back?-1.0f:1.0f;
+            icon.startNewSubPath(cx-8*direction,cy);icon.lineTo(cx+8*direction,cy);
+            icon.startNewSubPath(cx+1*direction,cy-7);icon.lineTo(cx+8*direction,cy);icon.lineTo(cx+1*direction,cy+7);
+        }
+        g.strokePath(icon,juce::PathStrokeType(1.5f,juce::PathStrokeType::curved,juce::PathStrokeType::rounded));
     }
-};
-class ReloadButton final:public juce::Button {
-public:
-    ReloadButton():Button("Actualizar pagina"){setTooltip("Actualizar pagina");}
-    void paintButton(juce::Graphics& g,bool over,bool down)override{
-        if(over||down){g.setColour(juce::Colour(down?0xffd4d7dd:0xffedf0f4));g.fillEllipse(getLocalBounds().toFloat());}
-        const auto area=getLocalBounds().toFloat();const float cx=area.getCentreX(),cy=area.getCentreY(),r=7;
-        g.setColour(juce::Colour(0xff747982));juce::Path arc;arc.addCentredArc(cx,cy,r,r,0,.55f,5.65f,true);g.strokePath(arc,juce::PathStrokeType(1.8f,juce::PathStrokeType::curved,juce::PathStrokeType::rounded));
-        juce::Path head;head.startNewSubPath(cx-7,cy-7);head.lineTo(cx-2,cy-6);head.lineTo(cx-6,cy-2);head.closeSubPath();g.fillPath(head);
-    }
+private:
+    Kind kind;
 };
 class Editor final:public juce::AudioProcessorEditor,private juce::Timer {
 public:
@@ -32,8 +36,8 @@ public:
     void paint(juce::Graphics& g)override;
 private:
     Processor& proc;BrowserView browser;juce::TextEditor url;
-    HomeButton home;
-    ReloadButton reload;
+    NavigationButton home{NavigationButton::back},forward{NavigationButton::forward};
+    NavigationButton reload{NavigationButton::refresh},start{NavigationButton::start};
     SystemStatus pc;
     ConnectivityState connection;
     juce::Image offlineImage=juce::ImageCache::getFromMemory(JoseadorAssets::offline_png,JoseadorAssets::offline_pngSize);
@@ -65,8 +69,10 @@ public:
 };
 Editor::Editor(Processor& p):AudioProcessorEditor(p),proc(p),browser(p.session){
     setResizable(true,true);setResizeLimits(320,400,1200,1400);setSize(400,680);
-    for(auto* c:std::initializer_list<juce::Component*>{&browser,&url,&home,&reload})addAndMakeVisible(c);
+    for(auto* c:std::initializer_list<juce::Component*>{&browser,&url,&home,&forward,&reload,&start})addAndMakeVisible(c);
     home.setTitle("Atras / Inicio");
+    start.onClick=[this]{proc.lastUrl="webcapture://home";if(!proc.session.running())proc.ensureBrowser();else proc.session.command(1,proc.lastUrl);url.setText({},false);};
+    forward.onClick=[this]{if(proc.session.running())proc.session.command(3);};
     reload.onClick=[this]{if(!proc.session.running())proc.ensureBrowser();else proc.session.command(6);};
     url.setText(proc.lastUrl=="webcapture://home"?juce::String():proc.lastUrl);url.setSelectAllWhenFocused(true);
     url.setInputRestrictions(2047);
@@ -91,9 +97,12 @@ Editor::Editor(Processor& p):AudioProcessorEditor(p),proc(p),browser(p.session){
 }
 void Editor::resized(){
     browser.setBounds(4,47,getWidth()-8,getHeight()-116);
-    home.setBounds(14,getHeight()-57,30,36);
-    url.setBounds(56,getHeight()-55,getWidth()-105,32);
-    reload.setBounds(getWidth()-42,getHeight()-53,28,28);
+    const int bottom=getHeight()-60;
+    home.setBounds(10,bottom+3,32,36);
+    forward.setBounds(44,bottom+3,32,36);
+    reload.setBounds(78,bottom+3,32,36);
+    url.setBounds(126,bottom+5,getWidth()-182,32);
+    start.setBounds(getWidth()-42,bottom+3,32,36);
 }
 void Editor::paint(juce::Graphics& g){
     g.fillAll(juce::Colour(0xff10151e));g.setColour(juce::Colour(0xff515866));g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(1),24,2);
@@ -120,13 +129,13 @@ void Editor::paint(juce::Graphics& g){
         return;
     }
     g.setColour(juce::Colour(0xffaeb4bf));g.fillRoundedRectangle((float)getWidth()/2-44,(float)getHeight()-9,88,3,2);
-    g.setColour(juce::Colour(0xfffdfdfe));g.fillRoundedRectangle(8,(float)getHeight()-60,(float)getWidth()-16,42,16);
+    g.setColour(juce::Colour(0xfffdfdfe));g.fillRoundedRectangle(114,(float)getHeight()-60,(float)getWidth()-160,42,16);
 }
 void Editor::timerCallback(){
     const auto change=connection.update(pc.network.load(),pc.internet.load());
     if(change!=ConnectivityState::none){
         const bool show=!connection.offline;
-        browser.setVisible(show);url.setVisible(show);home.setVisible(show);reload.setVisible(show);
+        browser.setVisible(show);url.setVisible(show);home.setVisible(show);forward.setVisible(show);reload.setVisible(show);start.setVisible(show);
         if(change==ConnectivityState::restored){proc.lastUrl="webcapture://home";if(!proc.session.running())proc.ensureBrowser();else proc.session.command(1,proc.lastUrl);url.setText({},false);}
     }const auto current=proc.session.address();if(change!=ConnectivityState::restored&&current.isNotEmpty()&&current!="about:blank"){proc.lastUrl=current;if(!url.hasKeyboardFocus(true))url.setText(current=="webcapture://home"?juce::String():current,false);}auto text=proc.session.status();text+="\n";text+=pc.network==2?"Wi-Fi conectado":(pc.network==1?"Ethernet conectado":(pc.network==0?"Sin conexion de red":"Red no disponible"));text+=" | ";text+=pc.battery==-2?"PC sin bateria":(pc.battery>=0?"Bateria: "+juce::String(pc.battery.load())+"%":"Bateria no disponible");url.setTooltip(text);repaint();}
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter(){return new Processor();}

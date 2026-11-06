@@ -42,7 +42,7 @@ Para volver a Inicio desde el buscador, escribe **inicio** y pulsa Enter, o deja
 
 Pulsa cualquiera de los once iconos: YouTube, TikTok, Instagram, Facebook, X, Reddit, Twitch, SoundCloud, Spotify, Part Time Gang o Gmail. Gmail abre su web y Part Time Gang abre la sala compartida.
 
-También puedes escribir una dirección o una búsqueda en la barra inferior y pulsar **Enter**. El botón izquierdo retrocede por el historial hasta llegar a Inicio; allí permanece. El botón circular **Actualizar página**, a la derecha, recarga la web abierta. Para sustituir texto, selecciónalo en el buscador y escribe la nueva dirección.
+También puedes escribir una dirección o una búsqueda en la barra inferior y pulsar **Enter**. El botón izquierdo retrocede por el historial hasta llegar a Inicio; allí permanece. A la izquierda se agrupan **Atrás**, **Adelante** y **Actualizar página**. Actualizar recarga la web abierta; Adelante recupera la siguiente página del historial. El icono de tres líneas de la derecha lleva directamente a **Inicio**, sin recorrer el historial. Para sustituir texto, selecciónalo en el buscador y escribe la nueva dirección.
 
 Arrastra la esquina de la ventana para cambiar su tamaño. La vista móvil y la pantalla de Inicio se adaptan al espacio disponible.
 
