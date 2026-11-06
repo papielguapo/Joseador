@@ -1,4 +1,8 @@
-# Validación de Joseador 0.3.1
+# Validación de JOSEADOR 0.4.0
+
+La revisión actual y los resultados están en [AUDITORIA-0.4.0.md](docs/AUDITORIA-0.4.0.md). Se reproducen a continuación las comprobaciones anteriores como historial.
+
+## Historial de 0.3.1
 
 Windows 11 x64, MSVC, SDK 10.0.26100, JUCE 8.0.6, CEF API 15000 y motor CEF 150.0.10 con H.264/AAC.
 

@@ -17,6 +17,8 @@ function wheel(hostname, pathname, video, expected) {
   const count=messages.length;handlers.keydown({isTrusted:true,key:'ArrowDown',target:{closest:()=>true},preventDefault:()=>{throw Error('editable intercepted');}});assert.equal(messages.length,count);
   handlers.keydown({isTrusted:false,key:'ArrowDown',target:{},preventDefault:()=>{throw Error('synthetic key accepted');}});
   handlers.wheel({isTrusted:false,target:{},deltaY:120,deltaX:0,preventDefault:()=>{throw Error('synthetic wheel accepted');}});assert.equal(messages.length,count);
+  handlers.keydown({isTrusted:true,key:'ArrowDown',target:{isContentEditable:true,closest:()=>null},preventDefault:()=>{throw Error('editable without attribute value intercepted');}});
+  handlers.wheel({isTrusted:true,shiftKey:true,target:{},deltaY:120,deltaX:0,preventDefault:()=>{throw Error('Shift+wheel intercepted');}});assert.equal(messages.length,count);
 }
 wheel('www.tiktok.com','/@test/video/1',true,'reels');
 wheel('www.instagram.com','/reels/1/',true,'reels');

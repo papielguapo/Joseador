@@ -1,53 +1,54 @@
-# Joseador 0.3.1
+# JOSEADOR 0.4.0
 
-**Creador: PAPIELGUAPO.** Instrumento VST3 para Windows 11 x64 con navegador móvil reescalable y audio exclusivo al DAW. Anteriormente llamado WebCapture Mobile.
+**Por PAPIELGUAPO.** Instrumento VST3 para Windows 11 x64: navegador móvil reescalable, audio al DAW y chat de la comunidad.
 
-[**Descargar VST3**](https://github.com/papielguapo/Joseador/releases/latest) · [**Guía de instalación y uso**](docs/GUIA.md) · [**Auditoría 0.3.1**](docs/AUDITORIA.md)
+[**Descargar ZIP con instalador EXE**](https://github.com/papielguapo/Joseador/releases/latest) · [**Guía**](docs/GUIA.md) · [**Auditoría y correcciones**](docs/AUDITORIA-0.4.0.md)
 
-<img src="docs/images/joseador.jpg" alt="Interfaz real de Joseador con pantalla móvil, once accesos web y buscador inferior" width="400">
+<img src="docs/images/joseador-040.jpg" width="400" alt="JOSEADOR con el acceso PT y un mensaje sin leer">
 
-*Interfaz real de 0.3.1: Inicio y botón Actualizar página, capturados en la aplicación de escritorio que comparte el editor VST3.*
+*Interfaz real de 0.4.0, capturada en la aplicación de escritorio que comparte el editor del VST3.*
 
-## Instalar en FL Studio
+## Instalar
 
-Descarga el ZIP desde [Releases](https://github.com/papielguapo/Joseador/releases), extráelo y ejecuta install.ps1 con FL Studio cerrado. Conserva toda la carpeta Joseador.vst3, incluido BrowserRuntime.
+1. Descarga y **extrae el ZIP completo**.
+2. Cierra el DAW y abre **Instalar JOSEADOR.exe**. Pulsa Instalar.
+3. Se copian JOSEADOR.vst3 y BrowserRuntime para tu usuario, con respaldo de la versión anterior. Si falta Visual C++, se abre el instalador oficial de Microsoft incluido en Prerequisites; completa sus instrucciones.
+4. En FL Studio, añade la ruta **%LOCALAPPDATA%\Programs\Common\VST3** al gestor de plugins si falta y vuelve a escanear. Carga **JOSEADOR**, fabricante **PAPIELGUAPO**, como instrumento del Channel Rack.
 
-En Options > Manage plugins, añade %LOCALAPPDATA%\Programs\Common\VST3 si es necesario y pulsa Find installed plugins. Carga Joseador, de PAPIELGUAPO, como instrumento. Asígnalo al insert del mezclador que quieras y graba con Edison o la grabación de pistas de FL.
+El EXE necesita los archivos del ZIP junto a él: conserva las carpetas JOSEADOR.vst3 y Prerequisites hasta terminar. También se incluye install.ps1 como alternativa para equipos con el runtime ya instalado. Consulta la guía para la instalación manual.
 
-El instalador conserva la versión anterior fuera del escaneo. Se mantienen los identificadores VST3 y el estado. Vuelve a escanear para actualizar el nombre en la caché del DAW.
+## Navegar y grabar
 
-## Uso
+Inicio contiene YouTube, TikTok, Instagram, Facebook, X, Reddit, Twitch, SoundCloud, Spotify, **Part Time Gang** y Gmail. Se ha retirado el acceso a WhatsApp.
 
-La salida al DAW está siempre activa. Las notas MIDI no disparan ni afinan la web. No necesita una nota sostenida. No hay grabador WAV, reinicio ni selector de escritorio. Al cerrar el editor sigue reproduciendo mientras el instrumento permanezca cargado y el host procese el canal. El transporte del DAW no controla la web y no hay renderizado acelerado sin conexión.
+El buscador inferior abre direcciones o búsquedas con Enter. El botón izquierdo retrocede hasta Inicio y el derecho **actualiza la página**. La rueda y las flechas envían gestos a las webs; los campos editables mantienen sus teclas normales. El resultado depende de cada servicio.
 
-Inicio tiene cuatro columnas y once accesos: YouTube, TikTok, Instagram, Facebook, X, Reddit, Twitch, SoundCloud, Spotify, WhatsApp Web y Gmail web. Abren sus páginas dentro del plugin. La barra inferior acepta direcciones o búsquedas con Enter; el botón izquierdo retrocede por el historial hasta Inicio y el botón circular de la derecha actualiza la página. Se ha retirado el micrófono.
+El audio sale siempre al DAW, sin una segunda reproducción local de Windows. Asigna el instrumento a una pista del Mixer y graba con Edison o con la grabación de pistas. Las notas MIDI no disparan ni afinan la web. Cerrar el editor no detiene la reproducción mientras el instrumento siga cargado y el host lo procese. No hay grabador WAV interno, selector de escritorio o renderizado acelerado sin conexión.
 
-La rueda genera gestos táctiles en todas las webs, incluidas TikTok, Reels, Shorts, SoundCloud y Spotify. Con la página enfocada, ↑/↓ envían gestos verticales y ←/→ horizontales. En historias de Instagram/Facebook, bajar avanza y subir retrocede. Campos editables y comentarios desplazables conservan su manejo habitual. El resultado depende de cada web.
+PCM estéreo de 32 bits float, con calidad limitada por el contenido original. La reproducción es en directo y puede tener latencia. Ventana de 320 × 400 a 1200 × 1400; marco inspirado en un teléfono, sin emular iOS ni Safari. Hora, red y batería proceden del PC.
 
-La ventana admite de 320 × 400 a 1200 × 1400, con viewport móvil adaptado al DPI. Inicio se ajusta sin desbordamiento. El marco recuerda a un iPhone; no emula iOS ni Safari. Hora, conexión y batería proceden del PC. Wi-Fi/LAN indica conexión del adaptador, no intensidad ni acceso garantizado a Internet.
+## Part Time Gang
 
-## Sesión y contraseñas
+Abre el icono de Mensajes con **PT** para entrar en la [sala compartida](https://part-time-gang.tangycondor.chatgpt.site). Elige un apodo: aparece junto a tus mensajes, también en los propios. Cambiar apodo permite modificarlo para los mensajes siguientes.
 
-Perfiles persistentes: %LOCALAPPDATA%\WebCaptureMobile\Profiles\SlotN. Cada instancia usa el primer perfil libre; las simultáneas usan perfiles separados. Al reiniciar se reutilizan. Si cambia el orden de carga de varias instancias puede cambiar su perfil. Los antiguos perfiles temporales pueden requerir iniciar sesión de nuevo.
+El círculo rojo muestra mensajes sin leer de **1 a 99**; aunque haya más, sigue mostrando **99**, sin signo +. Al abrir y leer el chat se actualiza el contador; a cero se oculta. El estado de lectura se conserva por perfil del plugin.
 
-Cookies y almacenamiento web persisten, sujetos a caducidad y controles del servicio. En formularios HTTPS compatibles, Joseador pregunta si quieres guardar o actualizar la contraseña. Usa el Administrador de credenciales de Windows, con un usuario por origen web, y puede rellenarla posteriormente. No escribe contraseñas en logs, URLs o localStorage. Puedes eliminar las entradas WebCaptureMobile:https://... en las credenciales genéricas de Windows.
+Es una sala pública con apodos no verificados y hasta 5.000 mensajes guardados. No exige correo ni contraseña. La conexión se actualiza por sondeo; no es un sistema de identidad verificada ni incluye moderación administrativa. La navegación al chat sustituye la página web que estuviera abierta. El servidor y su base de datos están alojados mediante Sites; su código está en [ChatServer](ChatServer).
 
-QR, passkeys y formularios especiales dependen del servicio. No se ha probado el acceso con cuentas reales a Gmail o WhatsApp. Algunas webs rechazan navegadores integrados o redirigen desde la vista móvil.
+## Sesiones y contraseñas
 
-## Audio y compatibilidad
+Los perfiles se conservan en **%LOCALAPPDATA%\WebCaptureMobile\Profiles\SlotN**. Cada instancia simultánea usa el primer perfil libre. Al cambiar el orden de carga puede cambiar el perfil asignado; no hay una asociación fija por proyecto.
 
-CEF entrega PCM estéreo de 32 bits float sin reproducción local adicional de Windows. Se solicita la frecuencia del proyecto y se adapta otra frecuencia mediante interpolación sinc. La calidad depende del contenido original. Puede existir latencia respecto al transporte.
+Cookies y almacenamiento web persisten sujetos a caducidad del servicio. En formularios HTTPS compatibles puedes guardar una contraseña en el Administrador de credenciales de Windows, con un usuario por origen. Las peticiones deben coincidir con la web principal. Elimina las entradas WebCaptureMobile:https://... en las credenciales genéricas de Windows para olvidarlas. QR, passkeys y formularios especiales dependen de cada web.
 
-Instrumento/MIDI/estado comprobados a 44,1/48/96 kHz. FL Studio 2026 abrió una versión anterior de la interfaz. No está certificado con todos los DAWs o webs. Pro Tools no carga VST3 directamente. No soporta macOS, Linux ni hosts de 32 bits.
+## Compatibilidad y pruebas
 
-## Compilar
+Instrumento/MIDI/estado comprobados a 44,1/48/96 kHz. Pruebas de CEF para audio sin salida duplicada, recarga, historial y vista pequeña; seis suites CTest, regresiones de sesión y estado abierto, 25 comprobaciones del chat y contador 0/1/99/100/1000. La apertura de PT y el paso de contador 1 a 0 se verificaron dentro del editor compartido.
 
-Requiere Visual Studio con C++ x64, CMake y Windows 11 SDK. Ejecuta build.ps1. Descarga JUCE 8.0.6 y CEF 150.0.10 / Chromium 150.0.7871.101 con H.264/AAC desde [godwinmix-cef](https://github.com/psmux/godwinmix-cef/releases/tag/cef-150.0.10), verifica el SHA-256 fijado y compila.
+No está certificado con todos los DAWs o cuentas reales de cada plataforma. Pro Tools no carga VST3 directamente. No soporta macOS, Linux ni hosts de 32 bits. **Reinicia FL Studio tras actualizar**: el VST3 y su helper deben pertenecer a la misma versión.
 
-Resultado: build/WebCaptureMobile_artefacts/Release/VST3/Joseador.vst3. Nombres internos WebCapture se mantienen por compatibilidad de estado, perfiles y credenciales. El navegador usa otro proceso y el bootstrap CEF con sandbox.
+## Compilar y licencias
 
-## Licencias
+Ejecuta build.ps1 con Visual Studio C++ x64, CMake y Windows 11 SDK. Genera una carpeta package con el VST3, instalador EXE y runtime oficial. JUCE 8.0.6 y CEF 150.0.10 con H.264/AAC se descargan con versiones fijadas. Los nombres internos WebCapture conservan compatibilidad de estado y perfiles.
 
-Código propio MIT. JUCE mantiene licencia AGPLv3/comercial; CEF y demás componentes mantienen sus licencias. Consulta ThirdParty, incluidos los avisos de códecs, antes de redistribuir. VALIDACION.md describe las pruebas. Git contiene código y documentos; los binarios están en Releases o se generan al compilar.
-
-La versión 0.3.1 refuerza el origen de las credenciales, la validación de gestos y las URLs del estado. Consulta [la auditoría interna y sus límites](docs/AUDITORIA.md).
+Código propio MIT. JUCE mantiene licencia AGPLv3/comercial; CEF, Microsoft y las demás dependencias conservan sus licencias. Consulta ThirdParty y [VALIDACION.md](VALIDACION.md). El instalador propio no está firmado digitalmente; el redistribuible de Microsoft conserva su firma original, verificada. Los binarios están en Releases y no se almacenan en Git.

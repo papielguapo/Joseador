@@ -45,8 +45,8 @@ public:
         // In VST3 currentExecutableFile is the plug-in DLL; in Standalone it is the exe.
         return module.getParentDirectory().getChildFile("BrowserRuntime");
     }
-    void ensureBrowser(){if(!session.data()){session.start(runtime());session.command(1,lastUrl);}}
-    const juce::String getName()const override{return "Joseador";}
+    void ensureBrowser(){if(session.data()&&!session.running())session.shutdown();if(!session.data()&&session.start(runtime()))session.command(1,lastUrl);}
+    const juce::String getName()const override{return "JOSEADOR";}
     void prepareToPlay(double sr,int)override{session.rate=sr;}
     void releaseResources()override{}
     bool isBusesLayoutSupported(const BusesLayout& l)const override{return l.getMainInputChannelSet().isDisabled()&&l.getMainOutputChannelSet()==juce::AudioChannelSet::stereo();}
@@ -57,16 +57,16 @@ public:
     int getNumPrograms()override{return 1;}int getCurrentProgram()override{return 0;}void setCurrentProgram(int)override{}
     const juce::String getProgramName(int)override{return{};}void changeProgramName(int,const juce::String&)override{}
     void getStateInformation(juce::MemoryBlock& block)override{juce::XmlElement x("WebCaptureMobile");const auto current=session.address();const auto address=current.isNotEmpty()?current:lastUrl;x.setAttribute("url",juce::String(navigation::projectAddress(std::wstring(address.toWideCharPointer())).c_str()));copyXmlToBinary(x,block);}
-    void setStateInformation(const void* bytes,int n)override{if(auto x=getXmlFromBinary(bytes,n))if(x->hasTagName("WebCaptureMobile")){const auto saved=x->getStringAttribute("url",lastUrl);lastUrl=juce::String(navigation::projectAddress(std::wstring(saved.toWideCharPointer())).c_str());}}
+    void setStateInformation(const void* bytes,int n)override{if(auto x=getXmlFromBinary(bytes,n))if(x->hasTagName("WebCaptureMobile")){const auto saved=x->getStringAttribute("url",lastUrl);lastUrl=juce::String(navigation::projectAddress(std::wstring(saved.toWideCharPointer())).c_str());if(session.data())session.command(1,lastUrl);}}
 };
 Editor::Editor(Processor& p):AudioProcessorEditor(p),proc(p),browser(p.session){
     setResizable(true,true);setResizeLimits(320,400,1200,1400);setSize(400,680);
     for(auto* c:std::initializer_list<juce::Component*>{&browser,&url,&home,&reload})addAndMakeVisible(c);
     home.setTitle("Atras / Inicio");
-    reload.onClick=[this]{proc.session.command(6);};
+    reload.onClick=[this]{if(!proc.session.running())proc.ensureBrowser();else proc.session.command(6);};
     url.setText(proc.lastUrl=="webcapture://home"?juce::String():proc.lastUrl);url.setSelectAllWhenFocused(true);
     url.setInputRestrictions(2047);
-    home.onClick=[this]{proc.session.command(2);};
+    home.onClick=[this]{if(!proc.session.running()){proc.lastUrl="webcapture://home";proc.ensureBrowser();}else proc.session.command(2);};
     url.setTextToShowWhenEmpty("Buscar o escribir direccion",juce::Colours::grey);
     url.setFont(juce::Font(16));
     url.setBorder(juce::BorderSize<int>(0));
@@ -81,7 +81,7 @@ Editor::Editor(Processor& p):AudioProcessorEditor(p),proc(p),browser(p.session){
             if(address.containsAnyOf(" \t")||!address.containsChar('.'))address="https://www.google.com/search?q="+juce::URL::addEscapeChars(address,true);
             else address="https://"+address;
         }
-        proc.lastUrl=address;proc.session.command(1,address);url.setText(address,false);};
+        proc.lastUrl=address;if(!proc.session.running())proc.ensureBrowser();else proc.session.command(1,address);url.setText(address,false);};
     startTimerHz(2);
 }
 void Editor::resized(){

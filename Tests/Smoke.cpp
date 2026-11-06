@@ -14,6 +14,26 @@ struct Activation:RuntimeClass<RuntimeClassFlags<ClassicCom>,IActivateAudioInter
 };
 int main(int argc,char** argv){
  juce::ScopedJuceInitialiser_GUI init;
+ if(argc==3&&std::string(argv[1])=="--live-state-test"){
+  juce::VST3PluginFormat format;juce::OwnedArray<juce::PluginDescription> types;format.findAllTypesForFile(types,argv[2]);if(types.size()!=1)return 40;
+  juce::String error;auto instance=format.createInstanceFromDescription(*types[0],48000,512,error);if(!instance)return 41;
+  const auto set=[&](const juce::String& url){juce::XmlElement xml("WebCaptureMobile");xml.setAttribute("url",url);juce::MemoryBlock processor;juce::AudioProcessor::copyXmlToBinary(xml,processor);juce::XmlElement host("VST3PluginState");host.createNewChildElement("IComponent")->addTextElement(processor.toBase64Encoding());juce::MemoryBlock data;juce::AudioProcessor::copyXmlToBinary(host,data);instance->setStateInformation(data.getData(),(int)data.getSize());};
+  const auto get=[&](){juce::MemoryBlock data;instance->getStateInformation(data);auto host=juce::AudioProcessor::getXmlFromBinary(data.getData(),(int)data.getSize());auto*component=host?host->getChildByName("IComponent"):nullptr;if(!component)return juce::String();juce::MemoryBlock processor;processor.fromBase64Encoding(component->getAllSubText());auto xml=juce::AudioProcessor::getXmlFromBinary(processor.getData(),(int)processor.getSize());return xml?xml->getStringAttribute("url"):juce::String();};
+  set("http://127.0.0.1:18947/state-first");std::unique_ptr<juce::AudioProcessorEditor> editor(instance->createEditorIfNeeded());Sleep(1800);for(int i=0;i<120&&get()!="http://127.0.0.1:18947/state-first";++i)Sleep(50);
+  const bool first=get()=="http://127.0.0.1:18947/state-first";set("http://127.0.0.1:18947/state-second");for(int i=0;i<60&&get()!="http://127.0.0.1:18947/state-second";++i)Sleep(50);
+  const auto actual=get();const bool changed=actual=="http://127.0.0.1:18947/state-second";editor.reset();instance.reset();std::cout<<"Live state first page: "<<first<<"; restored page applied: "<<changed<<"; actual="<<actual<<"\n";return first&&changed?0:42;
+ }
+ if(argc==3&&std::string(argv[1])=="--session-regression"){
+  BrowserSession session;const auto missing=juce::File::getSpecialLocation(juce::File::tempDirectory).getNonexistentChildFile("JoseadorMissingRuntime","",false);
+  if(session.start(missing,true))return 30;
+  const bool started=session.start(juce::File(juce::String::fromUTF8(argv[2])),true);if(!started)return 31;
+  const juce::String destination="http://127.0.0.1:18947/queue-regression";
+  session.command(1,destination);session.command(6);
+  for(int i=0;i<120&&(!session.data()->ready||session.address()!=destination);++i)Sleep(50);
+  const bool cleared=!session.status().contains("Falta el motor"),ordered=session.address()==destination;
+  std::cout<<"Startup error cleared: "<<cleared<<"; navigate then reload retained: "<<ordered<<"\n";
+  session.shutdown();return cleared&&ordered?0:32;
+ }
  if(argc==2&&std::string(argv[1])=="--status"){
   SystemStatus pc;Sleep(500);
   std::cout<<"Clock "<<juce::Time::getCurrentTime().formatted("%H:%M")<<"; network="<<pc.network.load()<<"; battery="<<pc.battery.load()<<"; AC="<<pc.power.load()<<"\n";

@@ -10,7 +10,7 @@ private:
     HWND container=nullptr;
     void timerCallback()override {
         if(!getPeer())return;
-        if(!container)container=CreateWindowExW(0,L"STATIC",L"Joseador",WS_CHILD|WS_VISIBLE|WS_CLIPCHILDREN,
+        if(!container)container=CreateWindowExW(0,L"STATIC",L"JOSEADOR",WS_CHILD|WS_VISIBLE|WS_CLIPCHILDREN,
             0,0,10,10,(HWND)getPeer()->getNativeHandle(),nullptr,GetModuleHandle(nullptr),nullptr);
         if(!container)return;
         const auto logical=getPeer()->getComponent().getLocalArea(this,getLocalBounds());

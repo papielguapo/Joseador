@@ -1,6 +1,7 @@
 # Build outputs and downloaded engines (CEF contains files larger than GitHub's limit).
 /.deps/
 /build/
+/package/
 *.vst3/
 *.zip
 *.7z

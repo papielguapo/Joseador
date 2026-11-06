@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
+import {readFileSync,readdirSync} from 'node:fs';
+import {handleChat} from '../lib/chat-server.mjs';
+const sqlite=new DatabaseSync(':memory:');for(const f of readdirSync('drizzle').filter(f=>f.endsWith('.sql')))sqlite.exec(readFileSync('drizzle/'+f,'utf8'));
+const db={prepare(sql){let values=[];return{bind(...v){values=v;return this},async first(){return sqlite.prepare(sql).get(...values)||null},async all(){return{results:sqlite.prepare(sql).all(...values)}},async run(){return sqlite.prepare(sql).run(...values)}}}};
+let now=Date.now();const realNow=Date.now;Date.now=()=>now;let assertions=0;
+const eq=(a,b)=>{assert.deepEqual(a,b);assertions++};
+const request=async(path,{method='GET',body,token,raw}={})=>{const headers={'cf-connecting-ip':'127.0.0.1'};if(body!==undefined||raw!==undefined)headers['content-type']='application/json';if(token)headers.authorization='Bearer '+token;const response=await handleChat(new Request('https://test.invalid'+path,{method,headers,body:raw??(body!==undefined?JSON.stringify(body):undefined)}),db);return{status:response.status,data:response.status===204?null:await response.json(),headers:response.headers}};
+try{
+ eq((await request('/api/status?after=0')).data.unread,0);
+ eq((await request('/api/messages',{method:'POST',body:{key:crypto.randomUUID(),text:'sin permiso'}})).status,401);
+ eq((await request('/api/session',{method:'POST',raw:'null'})).status,400);
+ eq((await request('/api/session',{method:'POST',raw:'x'.repeat(6001)})).status,400);
+ eq((await request('/api/session',{method:'POST',body:{name:''}})).status,400);
+ const a=(await request('/api/session',{method:'POST',body:{name:'  Prueba   Uno  '}})).data;
+ const b=(await request('/api/session',{method:'POST',body:{name:'Prueba Dos'}})).data;eq(a.name,'Prueba Uno');
+ const key=crypto.randomUUID(),sent=await request('/api/messages',{method:'POST',token:a.token,body:{key,text:'<script>texto visible</script>',name:'Suplantacion'}});eq(sent.status,201);eq(sent.data.message.name,'Prueba Uno');
+ const retry=await request('/api/messages',{method:'POST',token:a.token,body:{key,text:'<script>texto visible</script>'}});eq(retry.status,200);eq(retry.data.message.id,sent.data.message.id);
+ eq((await request('/api/messages',{method:'POST',token:b.token,body:{key,text:'no es mio'}})).status,409);
+ eq((await request('/api/messages',{method:'POST',token:a.token,body:{key:crypto.randomUUID(),text:'demasiado rapido'}})).status,429);
+ eq((await request('/api/session',{method:'POST',token:a.token,body:{name:'Nuevo Apodo'}})).status,200);
+ now+=2100;const renamed=await request('/api/messages',{method:'POST',token:a.token,body:{key:crypto.randomUUID(),text:'con mi nuevo nombre'}});eq(renamed.data.message.name,'Nuevo Apodo');eq(renamed.data.message.authorId,a.authorId);
+ const insert=sqlite.prepare('INSERT INTO messages(message_key,author_id,nick,body,created_at) VALUES(?,?,?,?,?)');for(let i=0;i<140;++i)insert.run(crypto.randomUUID(),'seed','Local','Mensaje '+i,now);
+ eq((await request('/api/status?after=0')).data.unread,99);
+ const page=await request('/api/messages?after=0');eq(page.data.messages.length,100);eq(page.data.more,true);
+ const next=await request('/api/messages?after='+page.data.messages.at(-1).id);eq(next.data.messages.length,42);eq(next.data.more,false);
+ eq((await request('/api/status?after='+next.data.latestId)).data.unread,0);
+ eq((await request('/api/messages?after=-1')).status,400);
+ eq((await request('/api/messages?after=9999999999999999')).status,400);
+ eq((await request('/api/status')).headers.get('access-control-allow-origin'),'*');eq((await request('/api/status')).headers.get('cache-control'),'no-store');
+ console.log('PASS: '+assertions+' chat checks (auth, nickname, retry, rate, pagination, 99 cap, validation)');
+}finally{Date.now=realNow;sqlite.close()}

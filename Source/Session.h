@@ -8,6 +8,7 @@ public:
     ~BrowserSession(){shutdown();}
     bool start(const juce::File& runtime,bool selfTest=false) {
         if(bridge)return true;
+        error.clear();
         name=L"Local\\WebCaptureMobile-"+std::wstring(juce::Uuid().toString().toWideCharPointer());
         mapping=CreateFileMappingW(INVALID_HANDLE_VALUE,nullptr,PAGE_READWRITE,0,sizeof(webcapture::Bridge),name.c_str());
         if(!mapping){error="No se pudo crear el puente de audio";return false;}
@@ -34,13 +35,13 @@ public:
         if(mapping){CloseHandle(mapping);mapping=nullptr;}
         if(mutex){CloseHandle(mutex);mutex=nullptr;}
     }
-    void command(uint32_t kind,const juce::String& url={}) {
-        if(!bridge||WaitForSingleObject(mutex,100)!=WAIT_OBJECT_0)return;
-        if(kind==1)wcsncpy_s(bridge->url,url.toWideCharPointer(),_TRUNCATE);
-        bridge->command=kind;ReleaseMutex(mutex);
+    bool running()const{return process.hProcess&&WaitForSingleObject(process.hProcess,0)==WAIT_TIMEOUT;}
+    bool command(uint32_t kind,const juce::String& url={}) {
+        if(!bridge)return false;const auto lock=WaitForSingleObject(mutex,100);if(lock!=WAIT_OBJECT_0&&lock!=WAIT_ABANDONED)return false;
+        const bool accepted=bridge->navigation.push(kind,url.toWideCharPointer());ReleaseMutex(mutex);return accepted;
     }
     juce::String address()const {
-        if(!bridge||WaitForSingleObject(mutex,0)!=WAIT_OBJECT_0)return{};
+        if(!bridge)return{};const auto lock=WaitForSingleObject(mutex,0);if(lock!=WAIT_OBJECT_0&&lock!=WAIT_ABANDONED)return{};
         juce::String value(bridge->url);ReleaseMutex(mutex);return value;
     }
     void attach(HWND parent,int width,int height) {

@@ -3,16 +3,18 @@
 #include <atomic>
 #include <cstdint>
 #include <cstring>
+#include "NavigationQueue.h"
 
 namespace webcapture {
 constexpr uint32_t capacity=262144;
 struct alignas(64) Bridge {
+    uint32_t signature=0x4a4f5332,version=2;
     std::atomic<uint32_t> read {0},write {0},sampleRate {48000},audioRate {0};
     std::atomic<uint32_t> ready {0},quit {0},streaming {0},fault {0},dropped {0};
     std::atomic<uint64_t> window {0},heartbeat {0};
     std::atomic<float> peak {0};
     // Navigation is confined to the UI threads. Named mutex protects these fields.
-    uint32_t command=0;
+    NavigationQueue navigation;
     wchar_t url[2048] {};
     wchar_t error[256] {};
     float audio[capacity*2] {};

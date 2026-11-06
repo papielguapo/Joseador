@@ -24,11 +24,20 @@ try{
  $env:_CL_='/Z7 /MP4'
  & $cmake -S $root -B "$root\build" -A x64 "-DJUCE_DIR:PATH=$deps/JUCE-8.0.6" "-DCEF_ROOT:PATH=$deps/$cefName" -DWEBCAPTURE_BUILD_TESTS=OFF
  if($LASTEXITCODE){throw 'Error configurando CMake'}
- & $cmake --build "$root\build" --config $Configuration --target WebCaptureMobile_VST3 MobileBrowser --parallel 4
+ & $cmake --build "$root\build" --config $Configuration --target WebCaptureMobile_VST3 MobileBrowser JOSEADORInstaller --parallel 4
  if($LASTEXITCODE){throw 'Error compilando'}
- $built=Join-Path $root "build\WebCaptureMobile_artefacts\$Configuration\VST3\Joseador.vst3"
+ $built=Join-Path $root "build\WebCaptureMobile_artefacts\$Configuration\VST3\JOSEADOR.vst3"
  $runtime=Join-Path $built 'Contents\x86_64-win\BrowserRuntime'
  New-Item -ItemType Directory -Force $runtime | Out-Null
  Copy-Item "$root\build\BrowserRuntime\$Configuration\*" $runtime -Recurse -Force
+ $package=Join-Path $root 'package'
+ New-Item -ItemType Directory -Force $package | Out-Null
+ $licenses=Join-Path $built 'Contents\Resources\Licenses'
+ New-Item -ItemType Directory -Force $licenses | Out-Null
+ Copy-Item "$root\ThirdParty\*" $licenses -Recurse -Force
+ Copy-Item -LiteralPath $built -Destination $package -Recurse -Force
+ Copy-Item "$root\build\$Configuration\Instalar JOSEADOR.exe" $package -Force
+ & "$root\Installer\prepare-redistributable.ps1" -Destination "$package\Prerequisites"
  Write-Host "VST3 completo: $built"
+ Write-Host "Paquete con instalador EXE y prerequisitos: $package"
 }finally{$env:_CL_=$previousCompilerOptions}

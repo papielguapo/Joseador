@@ -8,6 +8,7 @@
 #include "PasswordStore.h"
 #include "NavigationPolicy.h"
 #include "InputGate.h"
+#include "ChatState.h"
 #include "include/cef_sandbox_win.h"
 #include "include/cef_api_hash.h"
 #include <shellapi.h>
@@ -39,6 +40,7 @@ Ref<cef_load_handler_t>* loadHandler=nullptr;
 Ref<cef_display_handler_t>* displayHandler=nullptr;
 Ref<cef_jsdialog_handler_t>* dialogHandler=nullptr;
 HANDLE profileMutex=nullptr;
+parttimegang::ReadState chatRead;
 ULONGLONG testStarted=0;int testStep=0;
 HANDLE navigationMutex=nullptr;
 HWND root=nullptr;
@@ -50,7 +52,9 @@ bool historyTest=false,historyOk=true;int historyStep=-1;ULONGLONG historyStarte
 bool reloadTest=false,reloadIssued=false;int reloadLoads=0;ULONGLONG reloadStarted=0;
 std::wstring profileTest;
 int width=370,height=493,channelCount=2,protocolId=0,lastGestureId=0;
+ULONGLONG reloadWaitStarted=0;
 int wheelMode=0;HHOOK mouseHook=nullptr,keyboardHook=nullptr;InputGate inputGate;
+bool isHome(const std::wstring& address);
 struct SwipeState{bool active=false,tap=false;int direction=1;ULONGLONG started=0;double x=0,y=0,distance=0;bool horizontal=false;} swipe;
 void protocol(const std::string& method,const std::string& params){
     if(!active)return;auto*host=active->get_host(active);
@@ -65,6 +69,7 @@ void mobileMetrics(){
     protocol("Emulation.setTouchEmulationEnabled","{\"enabled\":true,\"maxTouchPoints\":1}");
 }
 void fitDocument(cef_frame_t*frame){
+    if(isHome(currentAddress)){String state(L"window.dispatchEvent(new CustomEvent('ptg-state',{detail:{read:"+std::to_wstring(chatRead.lastRead)+L"}}));"),origin(parttimegang::origin);frame->execute_java_script(frame,&state.value,&origin.value,0);}
     String script(L"(()=>{let m=document.querySelector('meta[name=viewport]');if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m);}m.content='width=device-width,initial-scale=1';let s=document.getElementById('webcapture-fit');if(!s){s=document.createElement('style');s.id='webcapture-fit';s.textContent='html{max-width:100%!important;overflow-x:hidden!important}body{width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important}video,iframe,img,canvas{max-width:100%!important}';document.head.appendChild(s);}if(!window.__wcFit){let timer;window.__wcFit=()=>{clearTimeout(timer);timer=setTimeout(()=>{document.documentElement.style.zoom='1';requestAnimationFrame(()=>{const w=innerWidth,sw=Math.max(document.documentElement.scrollWidth,document.body?document.body.scrollWidth:0);document.documentElement.style.zoom=sw>w+2?String(Math.max(.25,w/sw)):'1';});},80);};addEventListener('resize',window.__wcFit);new MutationObserver(window.__wcFit).observe(document.documentElement,{childList:true,subtree:true});}window.__wcFit();})();"),origin(L"https://webcapture.local");
     frame->execute_java_script(frame,&script.value,&origin.value,0);
     wchar_t file[32768];GetModuleFileNameW(nullptr,file,32768);std::wstring path=file;path=path.substr(0,path.find_last_of(L"\\/"))+L"\\mobile-input.js";
@@ -92,7 +97,7 @@ void updateSwipe(){if(!swipe.active)return;const double t=(GetTickCount64()-swip
     if(t>=1){touch("touchEnd",0,0);swipe.active=false;}
 }
 LRESULT CALLBACK mouseProc(int code,WPARAM message,LPARAM param){
-    if(code==HC_ACTION&&message==WM_MOUSEWHEEL&&active&&!(GetKeyState(VK_CONTROL)&0x8000)&&!(GetKeyState(VK_SHIFT)&0x8000)){
+    if(code==HC_ACTION&&message==WM_MOUSEWHEEL&&active&&!(GetKeyState(VK_CONTROL)&0x8000)&&!(GetKeyState(VK_SHIFT)&0x8000)&&!(GetKeyState(VK_MENU)&0x8000)){
         auto*info=(MOUSEHOOKSTRUCTEX*)param;RECT bounds{};GetClientRect(root,&bounds);POINT point=info->pt;ScreenToClient(root,&point);
         if(PtInRect(&bounds,point)){static int amount=0;const int delta=(short)HIWORD(info->mouseData);if(delta)inputGate.record(0,delta<0?1:-1,GetTickCount64());if(!wheelMode)return CallNextHookEx(mouseHook,code,message,param);
             if((amount>0)!=(delta>0))amount=0;amount+=delta;
@@ -121,7 +126,7 @@ LRESULT CALLBACK windowProc(HWND hwnd,UINT message,WPARAM wp,LPARAM lp){
     if(message==WM_SIZE){width=LOWORD(lp);height=HIWORD(lp);if(active){auto*h=active->get_host(active);SetWindowPos(h->get_window_handle(h),nullptr,0,0,width,height,SWP_NOZORDER|SWP_NOACTIVATE);release(h);mobileMetrics();}return 0;}
     if(message==WM_TIMER){shared->heartbeat=GetTickCount64();
         updateSwipe();
-        if(reloadTest&&reloadLoads==1&&!reloadIssued&&GetTickCount64()-reloadStarted>500&&WaitForSingleObject(navigationMutex,0)==WAIT_OBJECT_0){shared->command=6;reloadIssued=true;ReleaseMutex(navigationMutex);}
+        if(reloadTest&&reloadLoads==1&&!reloadIssued&&GetTickCount64()-reloadStarted>500&&WaitForSingleObject(navigationMutex,0)==WAIT_OBJECT_0){shared->navigation.push(6);reloadIssued=true;ReleaseMutex(navigationMutex);}
         if(historyTest&&historyStep>=0&&historyStep<4&&GetTickCount64()-historyStarted>(ULONGLONG)(400*(historyStep+1))){
             const std::wstring current=shared->url;
             if(WaitForSingleObject(navigationMutex,100)==WAIT_OBJECT_0){const auto hash=current.find(L'#');const auto label=isHome(current)?L"home":hash==std::wstring::npos?L"other":current.substr(hash);const auto marker=L" | H"+std::to_wstring(historyStep)+L":"+label;if(wcslen(shared->error)+marker.size()+1<std::size(shared->error))wcscat_s(shared->error,marker.c_str());ReleaseMutex(navigationMutex);}
@@ -134,7 +139,7 @@ LRESULT CALLBACK windowProc(HWND hwnd,UINT message,WPARAM wp,LPARAM lp){
             if(testStep==0&&elapsed>250){wheelGesture(false,1);++testStep;}
             else if(testStep==1&&elapsed>950){wheelGesture(false,-1);++testStep;}}
         if(shared->quit&&!closing){closing=true;closeBrowser();}
-        if(active&&!closing&&WaitForSingleObject(navigationMutex,0)==WAIT_OBJECT_0){auto action=shared->command;std::wstring address=shared->url;shared->command=0;ReleaseMutex(navigationMutex);
+        if(active&&!closing&&WaitForSingleObject(navigationMutex,0)==WAIT_OBJECT_0){NavigationRequest request;const bool loadingReload=shared->navigation.nextAction()==6&&active->is_loading(active);if(loadingReload&&!reloadWaitStarted)reloadWaitStarted=GetTickCount64();if(!loadingReload||GetTickCount64()-reloadWaitStarted>=500){shared->navigation.pop(request);reloadWaitStarted=0;}const auto action=request.action;std::wstring address=request.address;ReleaseMutex(navigationMutex);
             if(action==1){returningBack=false;navigate(address);}else if(action==2)backOrHome();else if(action==3)active->go_forward(active);
             else if(action==6){returningBack=false;active->reload(active);}
             else if(action==4||action==5){if(wheelMode)wheelGesture(wheelMode==2,action==4?1:-1,false,wheelMode==3);else{auto*host=active->get_host(active);cef_mouse_event_t event{};event.x=width/2;event.y=height/2;host->send_mouse_wheel_event(host,&event,0,action==4?-120:120);release(host);}}}
@@ -149,6 +154,7 @@ int run(HINSTANCE instance,void* sandbox){
     for(int i=1;i<count;++i){std::wstring a=argv[i];if(a.rfind(L"--bridge=",0)==0)name=a.substr(9);if(a==L"--self-test")selfTest=true;if(a==L"--home-test")homeTest=true;if(a==L"--history-test"){historyTest=true;homeTest=true;}if(a.rfind(L"--profile-test=",0)==0)profileTest=a.substr(15);if(a==L"--small"){width=320;height=280;}}LocalFree(argv);
     HANDLE mapping=OpenFileMappingW(FILE_MAP_ALL_ACCESS,FALSE,name.c_str());if(!mapping)return 31;
     shared=(webcapture::Bridge*)MapViewOfFile(mapping,FILE_MAP_ALL_ACCESS,0,0,sizeof(webcapture::Bridge));if(!shared)return 32;
+    if(shared->signature!=0x4a4f5332||shared->version!=2)return 38;
     navigationMutex=OpenMutexW(SYNCHRONIZE|MUTEX_MODIFY_STATE,FALSE,(name+L"-ui").c_str());if(!navigationMutex)return 33;
     reloadTest=std::wstring(GetCommandLineW()).find(L"--reload-test")!=std::wstring::npos;if(reloadTest)homeTest=true;
     if(!sandbox){shared->fault=1;return 34;}
@@ -160,12 +166,13 @@ int run(HINSTANCE instance,void* sandbox){
         auto key=L"Local\\WebCaptureMobileProfileSlot"+std::to_wstring(slot);auto mutex=CreateMutexW(nullptr,FALSE,key.c_str());if(!mutex)continue;
         const auto acquired=WaitForSingleObject(mutex,0);if(acquired==WAIT_OBJECT_0||acquired==WAIT_ABANDONED){profileMutex=mutex;cache=std::wstring(local)+L"\\WebCaptureMobile\\Profiles\\Slot"+std::to_wstring(slot);break;}CloseHandle(mutex);
     }if(!profileMutex){shared->fault=1;return 37;}}
+    chatRead.open(cache);
     String rootCache(cache),profile(cache+L"\\Profile"),agent(L"Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Mobile Safari/537.36");
     settings.root_cache_path=rootCache.value;settings.cache_path=profile.value;settings.user_agent=agent.value;
     settings.persist_session_cookies=1;
     trace("initialise\n");if(!cef_initialize(&args,&settings,nullptr,sandbox)){shared->fault=1;return 35;}trace("initialised\n");
     WNDCLASSW wc{};wc.lpfnWndProc=windowProc;wc.hInstance=instance;wc.lpszClassName=L"WebCaptureMobileBrowser";RegisterClassW(&wc);
-    root=CreateWindowExW(0,wc.lpszClassName,L"Joseador",WS_POPUP|WS_CLIPCHILDREN,0,0,width,height,nullptr,nullptr,instance,nullptr);
+    root=CreateWindowExW(0,wc.lpszClassName,L"JOSEADOR",WS_POPUP|WS_CLIPCHILDREN,0,0,width,height,nullptr,nullptr,instance,nullptr);
     auto*life=new Ref<cef_life_span_handler_t>;
     life->api.on_after_created=[](cef_life_span_handler_t*,cef_browser_t*b){trace("after created\n");active=b;b->base.add_ref(&b->base);shared->ready=1;};
     life->api.on_before_close=[](cef_life_span_handler_t*,cef_browser_t*){release(active);active=nullptr;shared->window=0;cef_quit_message_loop();};
@@ -197,10 +204,11 @@ int run(HINSTANCE instance,void* sandbox){
         const bool blankBack=returningBack&&address==L"about:blank";returningBack=false;
         if(blankBack){navigate(L"webcapture://home");return;}
         if(isHome(address))address=L"webcapture://home";
-        if(WaitForSingleObject(navigationMutex,0)==WAIT_OBJECT_0){if(shared->command!=1)wcsncpy_s(shared->url,address.c_str(),_TRUNCATE);ReleaseMutex(navigationMutex);}
+        if(WaitForSingleObject(navigationMutex,0)==WAIT_OBJECT_0){wcsncpy_s(shared->url,address.c_str(),_TRUNCATE);ReleaseMutex(navigationMutex);}
     };
     display->api.on_console_message=[](cef_display_handler_t*,cef_browser_t*,cef_log_severity_t,const cef_string_t*msg,const cef_string_t*,int)->int{
         std::wstring command((wchar_t*)msg->str,msg->length);
+        if(command.rfind(L"__PTG_READ__:",0)==0){chatRead.accept(passwords::origin(currentAddress),command,root&&IsWindowVisible(root)&&!IsIconic(GetAncestor(root,GA_ROOT)));return 1;}
         if(command==L"__WC_MODE__:reels"||command==L"__WC_MODE__:stories"||command==L"__WC_MODE__:scroll"||command==L"__WC_MODE__:normal"){wheelMode=command==L"__WC_MODE__:reels"?1:(command==L"__WC_MODE__:stories"?2:(command==L"__WC_MODE__:scroll"?3:0));return 1;}
         if(selfTest&&(command.rfind(L"WEBCAPTURE_FIT:",0)==0||command.rfind(L"WEBCAPTURE_TOUCH:",0)==0||command.rfind(L"WEBCAPTURE_PERSIST:",0)==0||command.rfind(L"WEBCAPTURE_RELOAD:",0)==0)&&WaitForSingleObject(navigationMutex,100)==WAIT_OBJECT_0){if(wcslen(shared->error)+command.size()+4<std::size(shared->error))wcscat_s(shared->error,(L" | "+command).c_str());ReleaseMutex(navigationMutex);return 1;}
         if(command==L"__WC_WHEEL__:reels:1"||command==L"__WC_WHEEL__:reels:-1"||command==L"__WC_WHEEL__:stories:1"||command==L"__WC_WHEEL__:stories:-1"||command==L"__WC_WHEEL__:scroll:1"||command==L"__WC_WHEEL__:scroll:-1"||command==L"__WC_WHEEL__:horizontal:1"||command==L"__WC_WHEEL__:horizontal:-1"){
@@ -225,8 +233,8 @@ int run(HINSTANCE instance,void* sandbox){
             if(!secret.empty()){
                 std::wstring oldUser,oldSecret;const bool same=passwords::read(site,oldUser,oldSecret)&&oldUser==user&&oldSecret==secret;passwords::wipe(oldSecret);
                 if(same)reply=L"saved";
-                else if(MessageBoxW(root,(L"Guardar la contrasena de "+site+L" en el Administrador de credenciales de Windows?\nSe usara al volver a iniciar sesion en esta web.").c_str(),L"Joseador - Guardar contrasena",MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2)==IDYES){
-                    if(passwords::save(site,user,secret))reply=L"saved";else{reply=L"retry";MessageBoxW(root,L"Windows no ha podido guardar la contrasena.",L"Joseador",MB_OK|MB_ICONINFORMATION);}}
+                else if(MessageBoxW(root,(L"Guardar la contrasena de "+site+L" en el Administrador de credenciales de Windows?\nSe usara al volver a iniciar sesion en esta web.").c_str(),L"JOSEADOR - Guardar contrasena",MB_YESNO|MB_ICONQUESTION|MB_DEFBUTTON2)==IDYES){
+                    if(passwords::save(site,user,secret))reply=L"saved";else{reply=L"retry";MessageBoxW(root,L"Windows no ha podido guardar la contrasena.",L"JOSEADOR",MB_OK|MB_ICONINFORMATION);}}
             }
         }
         {String response(reply);callback->cont(callback,1,&response.value);if(response.value.str)SecureZeroMemory(response.value.str,response.value.length*sizeof(char16_t));}

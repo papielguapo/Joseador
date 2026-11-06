@@ -1,0 +1,11 @@
+Microsoft Visual C++ v14 Redistributable x64
+
+Fuente oficial: https://aka.ms/vc14/vc_redist.x64.exe
+Documentacion: https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist/
+Version incluida: 14.51.36247.0
+Firma Authenticode verificada: Microsoft Corporation / Valid
+SHA-256: 843068991daaa1f73ad9f6239bce4d0f6a07a51f18c37ea2a867e9beca71295c
+
+El archivo se incluye sin modificar en Prerequisites/VC_redist.x64.exe.
+El instalador de JOSEADOR comprueba la version instalada y, si falta, abre el instalador oficial de Microsoft.
+El usuario completa las instrucciones y terminos de Microsoft. No se instala este runtime durante la compilacion.
