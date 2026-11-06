@@ -29,5 +29,6 @@ try{
  eq((await request('/api/messages?after=-1')).status,400);
  eq((await request('/api/messages?after=9999999999999999')).status,400);
  eq((await request('/api/status')).headers.get('access-control-allow-origin'),'*');eq((await request('/api/status')).headers.get('cache-control'),'no-store');
+ for(let i=0;i<9;++i)await request('/api/session',{method:'POST',token:a.token,body:{name:'Cambio '+i}});eq((await request('/api/session',{method:'POST',token:a.token,body:{name:'Cambio extra'}})).status,429);
  console.log('PASS: '+assertions+' chat checks (auth, nickname, retry, rate, pagination, 99 cap, validation)');
 }finally{Date.now=realNow;sqlite.close()}

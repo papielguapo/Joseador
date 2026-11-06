@@ -38,7 +38,7 @@ El instalador propio no tiene firma digital. No se ha ensayado una máquina Wind
 ## Resultados
 
 - **6/6 suites CTest:** política de URL, entrada nativa, credenciales sintéticas, cola de navegación, estado de lectura e instalación con recuperación.
-- **25 comprobaciones del servidor:** sesión, apodos, cambio de nombre, autorización, mensajes duplicados, limitación, cursores, paginación y contador máximo 99.
+- **26 comprobaciones del servidor:** sesión, apodos, cambio de nombre, autorización, mensajes duplicados, limitación, cursores, paginación y contador máximo 99.
 - JavaScript de navegación: nueve rutas y 36 casos de flechas, editores, eventos sintéticos y modificadores.
 - Contador de Inicio con 0, 1, 99, 100 y 1000 mensajes: valores esperados y ocultación correctos.
 - Regresiones con helper real: error de inicio limpiado y navegación seguida de recarga conservada.

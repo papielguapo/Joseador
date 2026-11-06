@@ -29,7 +29,7 @@ export async function handleChat(request,db){
   if(request.method==='POST'&&path==='/api/session'){
    const body=await readBody(request),name=typeof body.name==='string'?body.name.trim().replace(/\s+/g,' '):'';
    if(!name||name.length>24||/[\x00-\x1f\x7f<>]/.test(name))return json({error:'Escribe un apodo de 1 a 24 caracteres.'},400);
-   if(request.headers.has('authorization')){const who=await guest(request,db);if(!who)return json({error:'Vuelve a entrar con tu apodo.'},401);await db.prepare('UPDATE guests SET nick=? WHERE token_hash=?').bind(name,who.token_hash).run();return json({authorId:who.author_id,name});}
+   if(request.headers.has('authorization')){const who=await guest(request,db);if(!who)return json({error:'Vuelve a entrar con tu apodo.'},401);if(!await rate(db,'nickname:'+who.author_id,60,10,now))return json({error:'Demasiados cambios de apodo. Espera un minuto.'},429);await db.prepare('UPDATE guests SET nick=? WHERE token_hash=?').bind(name,who.token_hash).run();return json({authorId:who.author_id,name});}
    const ipKey=await digest('registration:'+ip);if(!await rate(db,ipKey,3600,60,now))return json({error:'Demasiados accesos. Intentalo mas tarde.'},429);
    const token=crypto.randomUUID()+crypto.randomUUID(),authorId=crypto.randomUUID();
    await db.prepare('INSERT INTO guests (token_hash,author_id,nick,created_at,last_post) VALUES (?,?,?,?,0)').bind(await digest(token),authorId,name,now).run();

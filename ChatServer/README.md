@@ -4,7 +4,7 @@ Servidor y web del chat de JOSEADOR, por PAPIELGUAPO.
 
 Sala publicada: https://part-time-gang.tangycondor.chatgpt.site
 
-Usa Vinext/React, Cloudflare Workers y D1 mediante Sites. La fuente desplegada corresponde al commit a6427e1e80799132b53fbfea7d9c761ea4b65bb6 del repositorio de hosting. Esta copia permite revisar el servidor sin incluir credenciales, datos de usuarios ni la base de prueba.
+Usa Vinext/React, Cloudflare Workers y D1 mediante Sites. La fuente desplegada corresponde al commit 70f234533f506271ef96a059dcd4a882ede41b9e del repositorio de hosting. Esta copia permite revisar el servidor sin incluir credenciales, datos de usuarios ni la base de prueba.
 
 ## Funciones
 
@@ -12,7 +12,7 @@ Apodos de invitado, cambio de apodo para mensajes posteriores, historial públic
 
 ## Desarrollo
 
-Requiere Node 22.13 o posterior. Instala dependencias con npm ci. Ejecuta node scripts/test-chat.mjs para las 25 comprobaciones en una base SQLite en memoria. Para publicar usa el flujo de Sites y sus helpers; .openai/hosting.json identifica la sala actual y requiere autorización del propietario para desplegar. No insertes tokens o claves en ese archivo.
+Requiere Node 22.13 o posterior. Instala dependencias con npm ci. Ejecuta node scripts/test-chat.mjs para las 26 comprobaciones en una base SQLite en memoria. Para publicar usa el flujo de Sites y sus helpers; .openai/hosting.json identifica la sala actual y requiere autorización del propietario para desplegar. No insertes tokens o claves en ese archivo.
 
 La migración inicial está en drizzle/0000_clumsy_mandarin.sql. Las bases locales y de producción están separadas. No cambies migraciones ya aplicadas; añade nuevas.
 

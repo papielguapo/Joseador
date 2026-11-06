@@ -43,7 +43,7 @@ Cookies y almacenamiento web persisten sujetos a caducidad del servicio. En form
 
 ## Compatibilidad y pruebas
 
-Instrumento/MIDI/estado comprobados a 44,1/48/96 kHz. Pruebas de CEF para audio sin salida duplicada, recarga, historial y vista pequeña; seis suites CTest, regresiones de sesión y estado abierto, 25 comprobaciones del chat y contador 0/1/99/100/1000. La apertura de PT y el paso de contador 1 a 0 se verificaron dentro del editor compartido.
+Instrumento/MIDI/estado comprobados a 44,1/48/96 kHz. Pruebas de CEF para audio sin salida duplicada, recarga, historial y vista pequeña; seis suites CTest, regresiones de sesión y estado abierto, 26 comprobaciones del chat y contador 0/1/99/100/1000. La apertura de PT y el paso de contador 1 a 0 se verificaron dentro del editor compartido.
 
 No está certificado con todos los DAWs o cuentas reales de cada plataforma. Pro Tools no carga VST3 directamente. No soporta macOS, Linux ni hosts de 32 bits. **Reinicia FL Studio tras actualizar**: el VST3 y su helper deben pertenecer a la misma versión.
 
